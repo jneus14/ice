@@ -2,11 +2,27 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+model Incident {
+  id           Int      @id @default(autoincrement())
+  url          String   @unique
+  altSources   String?
+  date         String?
+  location     String?
+  headline     String?
+  summary      String?
+  incidentType String?
+  country      String?
+  status       String   @default("RAW")
+  rawHtml      String?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
