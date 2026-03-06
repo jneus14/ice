@@ -14,9 +14,13 @@ type Incident = {
 export function IncidentList({
   incidents,
   total,
+  page,
+  totalPages,
 }: {
   incidents: Incident[];
   total: number;
+  page: number;
+  totalPages: number;
 }) {
   if (incidents.length === 0) {
     return (
@@ -36,6 +40,35 @@ export function IncidentList({
           <IncidentCard key={incident.id} incident={incident} />
         ))}
       </div>
+      {totalPages > 1 && (
+        <Pagination page={page} totalPages={totalPages} />
+      )}
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages }: { page: number; totalPages: number }) {
+  return (
+    <div className="flex items-center justify-center gap-2 mt-8">
+      {page > 1 && (
+        <a
+          href={`?page=${page - 1}`}
+          className="px-3 py-1.5 border border-warm-300 text-sm hover:bg-warm-100 transition-colors"
+        >
+          Previous
+        </a>
+      )}
+      <span className="text-sm text-warm-500">
+        Page {page} of {totalPages}
+      </span>
+      {page < totalPages && (
+        <a
+          href={`?page=${page + 1}`}
+          className="px-3 py-1.5 border border-warm-300 text-sm hover:bg-warm-100 transition-colors"
+        >
+          Next
+        </a>
+      )}
     </div>
   );
 }

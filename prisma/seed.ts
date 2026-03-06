@@ -15,7 +15,7 @@ async function main() {
   let created = 0;
   let skipped = 0;
 
-  for (const row of records) {
+  for (const row of records as Record<string, string>[]) {
     const url = row.link?.trim();
     if (!url) {
       skipped++;

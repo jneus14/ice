@@ -11,23 +11,28 @@ export default async function Home({
   const params = await searchParams;
   const tags = typeof params.tag === "string" ? [params.tag] : (params.tag as string[] | undefined);
 
-  const [{ incidents, total }, countries] = await Promise.all([
+  const page = Number(params.page) || 1;
+
+  const [{ incidents, total, pageSize }, countries] = await Promise.all([
     getIncidents({
       search: params.q as string,
       tags,
       country: params.country as string,
       dateFrom: params.from as string,
       dateTo: params.to as string,
+      page,
     }),
     getDistinctCountries(),
   ]);
+
+  const totalPages = Math.ceil(total / pageSize);
 
   return (
     <>
       <Suspense fallback={null}>
         <SearchFilters countries={countries} />
       </Suspense>
-      <IncidentList incidents={incidents} total={total} />
+      <IncidentList incidents={incidents} total={total} page={page} totalPages={totalPages} />
     </>
   );
 }
