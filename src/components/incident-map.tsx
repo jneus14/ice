@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 
 type MapIncident = {
   id: number;
@@ -24,14 +23,7 @@ function MapInner({ incidents }: { incidents: MapIncident[] }) {
 
   const L = require("leaflet");
   const { MapContainer, TileLayer, CircleMarker, Popup } = require("react-leaflet");
-
-  // Fix default icon path issues with webpack
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  });
+  const MarkerClusterGroup = require("react-leaflet-cluster").default;
 
   return (
     <MapContainer
@@ -44,31 +36,67 @@ function MapInner({ incidents }: { incidents: MapIncident[] }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {incidents.map((inc) => (
-        <CircleMarker
-          key={inc.id}
-          center={[inc.latitude!, inc.longitude!]}
-          radius={7}
-          pathOptions={{
-            color: "#c2410c",
-            fillColor: "#ea580c",
-            fillOpacity: 0.8,
-            weight: 2,
-          }}
-        >
-          <Popup>
-            <div className="text-sm max-w-[250px]">
-              <p className="font-semibold text-warm-900 mb-1">{inc.headline}</p>
-              {inc.location && (
-                <p className="text-warm-500 text-xs">{inc.location}</p>
-              )}
-              {inc.date && (
-                <p className="text-warm-500 text-xs">{inc.date}</p>
-              )}
-            </div>
-          </Popup>
-        </CircleMarker>
-      ))}
+      <MarkerClusterGroup
+        chunkedLoading
+        iconCreateFunction={(cluster: any) => {
+          const count = cluster.getChildCount();
+          let size = "small";
+          if (count >= 50) size = "large";
+          else if (count >= 10) size = "medium";
+
+          const sizes: Record<string, { dim: number; fontSize: string }> = {
+            small: { dim: 32, fontSize: "12px" },
+            medium: { dim: 40, fontSize: "13px" },
+            large: { dim: 48, fontSize: "14px" },
+          };
+          const s = sizes[size];
+
+          return L.divIcon({
+            html: `<div style="
+              background: rgba(234,88,12,0.85);
+              color: white;
+              border-radius: 50%;
+              width: ${s.dim}px;
+              height: ${s.dim}px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 700;
+              font-size: ${s.fontSize};
+              border: 2px solid rgba(194,65,12,0.9);
+              box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            ">${count}</div>`,
+            className: "",
+            iconSize: L.point(s.dim, s.dim),
+          });
+        }}
+      >
+        {incidents.map((inc) => (
+          <CircleMarker
+            key={inc.id}
+            center={[inc.latitude!, inc.longitude!]}
+            radius={7}
+            pathOptions={{
+              color: "#c2410c",
+              fillColor: "#ea580c",
+              fillOpacity: 0.8,
+              weight: 2,
+            }}
+          >
+            <Popup>
+              <div className="text-sm max-w-[250px]">
+                <p className="font-semibold text-warm-900 mb-1">{inc.headline}</p>
+                {inc.location && (
+                  <p className="text-warm-500 text-xs">{inc.location}</p>
+                )}
+                {inc.date && (
+                  <p className="text-warm-500 text-xs">{inc.date}</p>
+                )}
+              </div>
+            </Popup>
+          </CircleMarker>
+        ))}
+      </MarkerClusterGroup>
     </MapContainer>
   );
 }
