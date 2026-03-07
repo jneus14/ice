@@ -3,6 +3,7 @@ import { IncidentTable } from "@/components/admin/incident-table";
 import { AddIncidentForm } from "@/components/admin/add-incident-form";
 import { CsvUploadForm } from "@/components/admin/csv-upload-form";
 import { ScrapeAllButton } from "@/components/admin/scrape-all-button";
+import { BackfillButton } from "@/components/admin/backfill-button";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function AdminPage() {
         <AddIncidentForm />
         <CsvUploadForm />
         <ScrapeAllButton incompleteCount={stats.raw + stats.failed} />
+        <BackfillButton />
       </div>
 
       <IncidentTable incidents={incidents} />

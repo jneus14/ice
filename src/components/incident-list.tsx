@@ -49,34 +49,32 @@ export function IncidentList({
 
   return (
     <div>
-      {/* Results count */}
-      <p className="text-sm text-warm-500 mb-2">
-        Showing <span className="font-semibold text-warm-900">{total}</span> of{" "}
-        <span className="font-semibold text-warm-900">{totalAll}</span>{" "}
-        documented incidents
-      </p>
-
-      <hr className="border-warm-200 mb-4" />
-
-      {/* Time range buttons */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {TIME_RANGES.map((range) => (
-          <button
-            key={range.value}
-            onClick={() => setRange(range.value)}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md border transition-colors ${
-              currentRange === range.value
-                ? "bg-orange-500 text-white border-orange-500"
-                : "bg-white text-warm-700 border-warm-300 hover:border-warm-400"
-            }`}
-          >
-            {range.label}
-          </button>
-        ))}
+      {/* Time range + count bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="flex flex-wrap gap-1.5">
+          {TIME_RANGES.map((range) => (
+            <button
+              key={range.value}
+              onClick={() => setRange(range.value)}
+              className={`px-3 py-1 text-xs font-medium rounded-md border transition-colors ${
+                currentRange === range.value
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "bg-white text-warm-600 border-warm-300 hover:border-warm-400"
+              }`}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-warm-500">
+          <span className="font-semibold text-warm-700">{total}</span> of{" "}
+          <span className="font-semibold text-warm-700">{totalAll}</span>{" "}
+          incidents
+        </p>
       </div>
 
       {isPending && (
-        <div className="text-sm text-warm-400 mb-4">Loading...</div>
+        <div className="text-xs text-warm-400 mb-3">Loading...</div>
       )}
 
       {incidents.length === 0 ? (

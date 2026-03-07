@@ -5,7 +5,9 @@ import {
   getIncidents,
   getDistinctCountries,
   getTotalWithHeadline,
+  getMapIncidents,
 } from "@/lib/queries";
+import { IncidentMap } from "@/components/incident-map";
 
 export default async function Home({
   searchParams,
@@ -20,7 +22,7 @@ export default async function Home({
 
   const page = Number(params.page) || 1;
 
-  const [{ incidents, total, pageSize }, countries, totalAll] =
+  const [{ incidents, total, pageSize }, countries, totalAll, mapIncidents] =
     await Promise.all([
       getIncidents({
         search: params.q as string,
@@ -34,6 +36,7 @@ export default async function Home({
       }),
       getDistinctCountries(),
       getTotalWithHeadline(),
+      getMapIncidents(),
     ]);
 
   const totalPages = Math.ceil(total / pageSize);
@@ -43,6 +46,7 @@ export default async function Home({
       <Suspense fallback={null}>
         <SearchFilters countries={countries} />
       </Suspense>
+      {mapIncidents.length > 0 && <IncidentMap incidents={mapIncidents} />}
       <IncidentList
         incidents={incidents}
         total={total}

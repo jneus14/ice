@@ -11,18 +11,21 @@ datasource db {
 }
 
 model Incident {
-  id           Int      @id @default(autoincrement())
-  url          String   @unique
+  id           Int       @id @default(autoincrement())
+  url          String    @unique
   altSources   String?
   date         String?
+  parsedDate   DateTime?
   location     String?
+  latitude     Float?
+  longitude    Float?
   headline     String?
   summary      String?
   incidentType String?
   country      String?
-  status       String   @default("RAW")
+  status       String    @default("RAW")
   rawHtml      String?
   errorMessage String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
