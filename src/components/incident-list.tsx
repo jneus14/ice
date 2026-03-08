@@ -1,9 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
 import { IncidentCard } from "./incident-card";
-import { TIME_RANGES } from "@/lib/constants";
 
 type Incident = {
   id: number;
@@ -30,53 +27,16 @@ export function IncidentList({
   page: number;
   totalPages: number;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-  const currentRange = searchParams.get("range") || "all";
-
-  const setRange = (range: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("page");
-    if (range === "all") {
-      params.delete("range");
-    } else {
-      params.set("range", range);
-    }
-    startTransition(() => {
-      router.push(`/?${params.toString()}`);
-    });
-  };
-
   return (
     <div>
-      {/* Time range + count bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div className="flex flex-wrap gap-1.5">
-          {TIME_RANGES.map((range) => (
-            <button
-              key={range.value}
-              onClick={() => setRange(range.value)}
-              className={`px-3 py-1 text-xs font-medium rounded-md border transition-colors ${
-                currentRange === range.value
-                  ? "bg-orange-500 text-white border-orange-500"
-                  : "bg-white text-warm-600 border-warm-300 hover:border-warm-400"
-              }`}
-            >
-              {range.label}
-            </button>
-          ))}
-        </div>
+      {/* Count bar */}
+      <div className="flex justify-end mb-4">
         <p className="text-xs text-warm-500">
           <span className="font-semibold text-warm-700">{total}</span> of{" "}
           <span className="font-semibold text-warm-700">{totalAll}</span>{" "}
           incidents
         </p>
       </div>
-
-      {isPending && (
-        <div className="text-xs text-warm-400 mb-3">Loading...</div>
-      )}
 
       {incidents.length === 0 ? (
         <div className="py-12 text-center text-warm-400">
