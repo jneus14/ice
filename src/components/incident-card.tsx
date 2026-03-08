@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { parseAltSources } from "@/lib/sources";
+import { INCIDENT_TYPE_TAGS, PERSON_IMPACTED_TAGS } from "@/lib/constants";
 
 type Incident = {
   id: number;
@@ -17,90 +18,148 @@ type Incident = {
 
 function formatDate(dateStr: string | null): string | null {
   if (!dateStr) return null;
-  const d = new Date(dateStr + "T12:00:00Z"); // noon UTC avoids timezone off-by-one
+  const d = new Date(dateStr + "T12:00:00Z");
   if (isNaN(d.getTime())) return dateStr;
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
 }
 
+const incidentTypeSet = new Set(INCIDENT_TYPE_TAGS.map((t) => t.value));
+const personImpactedSet = new Set(PERSON_IMPACTED_TAGS.map((t) => t.value));
+
+function getTagLabel(value: string): string {
+  return (
+    INCIDENT_TYPE_TAGS.find((t) => t.value === value)?.label ??
+    PERSON_IMPACTED_TAGS.find((t) => t.value === value)?.label ??
+    value
+  );
+}
+
 export function IncidentCard({ incident }: { incident: Incident }) {
   const [expanded, setExpanded] = useState(false);
-  const tags = incident.incidentType
+
+  const rawTags = incident.incidentType
     ?.split(",")
     .map((t) => t.trim())
-    .filter(Boolean) || [];
+    .filter(Boolean) ?? [];
+
+  const incidentTypeTags = rawTags.filter((t) => incidentTypeSet.has(t));
+  const personImpactedTags = rawTags.filter((t) => personImpactedSet.has(t));
+  const otherTags = rawTags.filter(
+    (t) => !incidentTypeSet.has(t) && !personImpactedSet.has(t)
+  );
 
   const allSources = [incident.url, ...parseAltSources(incident.altSources)];
+  const hasMeta = incident.date || incident.location || incident.country;
 
   return (
     <article
-      className="border-b border-warm-200 py-5 cursor-pointer hover:bg-warm-100/50 transition-colors px-2 -mx-2"
+      className="group border-b border-warm-200 py-5 cursor-pointer transition-colors hover:bg-warm-50/70 px-3 -mx-3"
       onClick={() => setExpanded(!expanded)}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-3">
+        {/* Main content */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-serif text-lg font-semibold leading-tight">
+          {/* Headline */}
+          <h3 className="font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors">
             {incident.headline || "Untitled incident"}
           </h3>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-warm-500">
-            {incident.date && <span>{formatDate(incident.date)}</span>}
-            {incident.location && (
-              <>
-                {incident.date && <span aria-hidden>&middot;</span>}
-                <span>{incident.location}</span>
-              </>
-            )}
-            {incident.country && (
-              <>
-                <span aria-hidden>&middot;</span>
-                <span>{incident.country}</span>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {tags.map((tag, i) => (
-            <span
-              key={`${tag}-${i}`}
-              className="px-2 py-0.5 text-xs rounded-full bg-warm-100 text-warm-600 border border-warm-200"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
+          {/* Date · Location · Country */}
+          {hasMeta && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[0.8rem] text-warm-400">
+              {incident.date && (
+                <span className="font-medium text-warm-500">{formatDate(incident.date)}</span>
+              )}
+              {incident.date && incident.location && (
+                <span aria-hidden className="text-warm-300">·</span>
+              )}
+              {incident.location && <span>{incident.location}</span>}
+              {incident.country && (
+                <>
+                  <span aria-hidden className="text-warm-300">·</span>
+                  <span>{incident.country}</span>
+                </>
+              )}
+            </div>
+          )}
 
-      {expanded && (
-        <div className="mt-3 space-y-3">
-          {incident.summary && (
-            <p className="text-sm text-warm-700 leading-relaxed">
+          {/* Tags */}
+          {rawTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {incidentTypeTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200"
+                >
+                  {getTagLabel(tag)}
+                </span>
+              ))}
+              {personImpactedTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200"
+                >
+                  {getTagLabel(tag)}
+                </span>
+              ))}
+              {otherTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-warm-100 text-warm-500 border border-warm-200"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Summary preview (collapsed) */}
+          {!expanded && incident.summary && (
+            <p className="text-sm text-warm-500 mt-2 line-clamp-2 leading-relaxed">
               {incident.summary}
             </p>
           )}
-          <div className="space-y-1">
-            {allSources.map((src, i) => (
-              <a
-                key={src}
-                href={src}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="block text-sm text-warm-900 underline hover:text-warm-600"
-              >
-                {i === 0 ? "Read source article" : `Additional source ${i}`} →
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {!expanded && incident.summary && (
-        <p className="text-sm text-warm-500 mt-2 line-clamp-2">
-          {incident.summary}
-        </p>
-      )}
+          {/* Expanded content */}
+          {expanded && (
+            <div className="mt-3 space-y-3">
+              {incident.summary && (
+                <p className="text-sm text-warm-700 leading-relaxed">
+                  {incident.summary}
+                </p>
+              )}
+              <div className="flex flex-col gap-1">
+                {allSources.map((src, i) => (
+                  <a
+                    key={src}
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 text-sm text-warm-700 hover:text-orange-600 underline underline-offset-2 transition-colors"
+                  >
+                    {i === 0 ? "Read source" : `Additional source ${i}`}
+                    <span aria-hidden>→</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Expand chevron */}
+        <div className="pt-1 text-warm-300 group-hover:text-warm-400 transition-colors shrink-0">
+          <svg
+            className={`w-4 h-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
     </article>
   );
 }
