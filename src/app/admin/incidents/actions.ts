@@ -1,5 +1,6 @@
 "use server";
 
+import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
@@ -132,4 +133,66 @@ export async function mergeIncidents(ids: number[]) {
   revalidatePath("/");
 
   return { survivingId: primary.id };
+}
+
+export async function findAndMergeDuplicates(): Promise<{ merged: number; message: string }> {
+  await requireAdmin();
+
+  const incidents = await prisma.incident.findMany({
+    where: { status: "COMPLETE", headline: { not: null } },
+    select: { id: true, headline: true, date: true, location: true },
+    orderBy: { parsedDate: "desc" },
+    take: 300,
+  });
+
+  if (incidents.length < 2) {
+    return { merged: 0, message: "Not enough incidents to check" };
+  }
+
+  const anthropic = new Anthropic();
+  const list = incidents
+    .map((i) => `[${i.id}] ${i.headline} — ${i.date ?? "?"}, ${i.location ?? "?"}`)
+    .join("\n");
+
+  const msg = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1500,
+    messages: [
+      {
+        role: "user",
+        content: `Review these ICE incident reports. Identify groups that clearly describe the SAME individual person across multiple articles. Only high-confidence matches. Return ONLY a JSON array of ID arrays, e.g. [[101,205],[88,120]]. If none, return [].
+
+${list}`,
+      },
+    ],
+  });
+
+  const text = msg.content[0].type === "text" ? msg.content[0].text.trim() : "[]";
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) return { merged: 0, message: "No duplicates found" };
+
+  let groups: number[][] = [];
+  try {
+    groups = JSON.parse(match[0]);
+  } catch {
+    return { merged: 0, message: "No duplicates found" };
+  }
+
+  if (!groups.length) return { merged: 0, message: "No duplicates found" };
+
+  let mergedCount = 0;
+  for (const group of groups) {
+    if (group.length >= 2) {
+      try {
+        await mergeIncidents(group);
+        mergedCount++;
+      } catch (e) {
+        console.error("Failed to merge group", group, e);
+      }
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { merged: mergedCount, message: `Merged ${mergedCount} duplicate group${mergedCount !== 1 ? "s" : ""}` };
 }

@@ -1,7 +1,7 @@
 export const INCIDENT_TYPE_TAGS = [
   { value: "Death", label: "Death" },
   { value: "Deported", label: "Deportation" },
-  { value: "3rd Country Deportation", label: "Deportation to 3rd Country" },
+  { value: "3rd Country Deportation", label: "Third Country Deportation" },
   { value: "Detention Conditions", label: "Detention Conditions" },
   { value: "Detained", label: "Disappearance/Detention" },
   { value: "Officer Misconduct", label: "Officer Misconduct" },
@@ -14,6 +14,7 @@ export const INCIDENT_TYPE_TAGS = [
 export const PERSON_IMPACTED_TAGS = [
   { value: "LPR", label: "LPR/Greencard Holder" },
   { value: "Minor/Family", label: "Minor/Family" },
+  { value: "Native American", label: "Native American" },
   { value: "Refugee/Asylum", label: "Refugee/Asylum Seeker" },
   { value: "TPS", label: "Temporary Protected Status" },
   { value: "U.S. Citizen", label: "U.S. Citizen" },
@@ -34,7 +35,6 @@ export const STATUS = {
 } as const;
 
 export const TIME_RANGES = [
-  { value: "week", label: "Past Week" },
   { value: "month", label: "Past Month" },
   { value: "3months", label: "Past 3 Months" },
   { value: "year", label: "Past Year" },

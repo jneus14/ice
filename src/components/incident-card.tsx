@@ -15,6 +15,13 @@ type Incident = {
   country: string | null;
 };
 
+function formatDate(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + "T12:00:00Z"); // noon UTC avoids timezone off-by-one
+  if (isNaN(d.getTime())) return dateStr;
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+}
+
 export function IncidentCard({ incident }: { incident: Incident }) {
   const [expanded, setExpanded] = useState(false);
   const tags = incident.incidentType
@@ -35,7 +42,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
             {incident.headline || "Untitled incident"}
           </h3>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-warm-500">
-            {incident.date && <span>{incident.date}</span>}
+            {incident.date && <span>{formatDate(incident.date)}</span>}
             {incident.location && (
               <>
                 {incident.date && <span aria-hidden>&middot;</span>}

@@ -43,10 +43,10 @@ export default async function Home({
 
   return (
     <>
+      {mapIncidents.length > 0 && <IncidentMap incidents={mapIncidents} />}
       <Suspense fallback={null}>
         <SearchFilters countries={countries} />
       </Suspense>
-      {mapIncidents.length > 0 && <IncidentMap incidents={mapIncidents} />}
       <IncidentList
         incidents={incidents}
         total={total}

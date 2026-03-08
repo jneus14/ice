@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateIncident, deleteIncident, mergeIncidents } from "@/app/admin/incidents/actions";
+import { updateIncident, deleteIncident, findAndMergeDuplicates } from "@/app/admin/incidents/actions";
 import { processIncident } from "@/app/admin/incidents/process-action";
 import { parseAltSources } from "@/lib/sources";
 
@@ -92,6 +92,7 @@ function EditRow({
   return (
     <tr className="bg-warm-50">
       <td colSpan={7} className="p-4">
+
         <form
           action={async (formData) => {
             setIsPending(true);
@@ -155,8 +156,8 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [merging, setMerging] = useState(false);
+  const [deduping, setDeduping] = useState(false);
+  const [dedupeMsg, setDedupeMsg] = useState<string | null>(null);
 
   const filtered = incidents.filter((inc) => {
     if (statusFilter !== "ALL" && inc.status !== statusFilter) return false;
@@ -173,27 +174,17 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
     );
   });
 
-  function toggleSelect(id: number) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function handleMerge() {
-    const ids = Array.from(selected);
-    if (ids.length < 2) return;
-    if (!confirm(`Merge ${ids.length} incidents into one? This will synthesize a new headline and summary using AI and delete the duplicate records.`)) return;
-    setMerging(true);
+  async function handleDeduplicate() {
+    if (!confirm("Scan all incidents for duplicates about the same individual and auto-merge them using AI? This may take a minute.")) return;
+    setDeduping(true);
+    setDedupeMsg(null);
     try {
-      await mergeIncidents(ids);
-      setSelected(new Set());
+      const result = await findAndMergeDuplicates();
+      setDedupeMsg(result.message);
     } catch (e: any) {
-      alert("Merge failed: " + e.message);
+      setDedupeMsg("Error: " + e.message);
     } finally {
-      setMerging(false);
+      setDeduping(false);
     }
   }
 
@@ -221,28 +212,20 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
         <span className="text-xs text-warm-400">
           {filtered.length} of {incidents.length}
         </span>
-        {selected.size >= 2 && (
-          <button
-            onClick={handleMerge}
-            disabled={merging}
-            className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 rounded-md"
-          >
-            {merging ? "Merging..." : `Merge ${selected.size} selected`}
-          </button>
-        )}
-        {selected.size > 0 && (
-          <button
-            onClick={() => setSelected(new Set())}
-            className="text-xs text-warm-400 hover:text-warm-700 underline"
-          >
-            Clear selection
-          </button>
+        <button
+          onClick={handleDeduplicate}
+          disabled={deduping}
+          className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 rounded-md"
+        >
+          {deduping ? "Finding duplicates..." : "Auto-deduplicate"}
+        </button>
+        {dedupeMsg && (
+          <span className="text-xs text-warm-500">{dedupeMsg}</span>
         )}
       </div>
     <div className="overflow-x-auto">
       <table className="w-full text-sm table-fixed">
         <colgroup>
-          <col className="w-[36px]" />
           <col className="w-[80px]" />
           <col className="w-[28%]" />
           <col className="w-[80px]" />
@@ -253,7 +236,6 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
         </colgroup>
         <thead>
           <tr className="border-b border-warm-300 text-left">
-            <th className="py-2 pr-2"></th>
             <th className="py-2 pr-3 font-medium text-warm-500">Status</th>
             <th className="py-2 pr-3 font-medium text-warm-500">Headline</th>
             <th className="py-2 pr-3 font-medium text-warm-500">Date</th>
@@ -272,16 +254,8 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
                 onClose={() => setEditingId(null)}
               />
             ) : (
-              <tr key={inc.id} className={`border-b border-warm-100 hover:bg-warm-50 ${selected.has(inc.id) ? "bg-indigo-50" : ""}`}>
-                <td className="py-2 pr-2">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(inc.id)}
-                    onChange={() => toggleSelect(inc.id)}
-                    className="accent-indigo-600"
-                  />
-                </td>
-                <td className="py-2 pr-3">
+              <tr key={inc.id} className="border-b border-warm-100 hover:bg-warm-50">
+                <td className="py-2 pr-3 align-top">
                   <StatusBadge status={inc.status} />
                   {inc.status === "FAILED" && inc.errorMessage && (
                     <span className="block text-xs text-red-500 mt-0.5 max-w-32 truncate" title={inc.errorMessage}>

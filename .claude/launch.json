@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Next.js dev",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["/Users/JNeusner/ice/.claude/dev.sh"],
+      "port": 3000
+    }
+  ]
+}
