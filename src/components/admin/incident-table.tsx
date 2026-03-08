@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { updateIncident, deleteIncident, findAndMergeDuplicates } from "@/app/admin/incidents/actions";
-import { processIncident } from "@/app/admin/incidents/process-action";
-import { parseAltSources } from "@/lib/sources";
+import { useRouter } from "next/navigation";
+import {
+  updateIncidentData,
+  deleteIncident,
+  findAndMergeDuplicates,
+  bulkAddUrls,
+} from "@/app/admin/incidents/actions";
+import { processIncident, processAllIncomplete } from "@/app/admin/incidents/process-action";
+import { parseAltSources, serializeAltSources } from "@/lib/sources";
 
 type Incident = {
   id: number;
@@ -20,144 +26,249 @@ type Incident = {
   createdAt: Date;
 };
 
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
+// Merge url + altSources into one comma-separated string for editing
+function toSourcesField(url: string, altSources: string | null): string {
+  const alts = parseAltSources(altSources);
+  return [url, ...alts].join(", ");
+}
+
+// Parse sources field back: first URL = primary, rest = altSources
+function fromSourcesField(val: string): { url: string; altSources: string | null } {
+  const parts = val
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const url = parts[0] || "";
+  const alts = parts.slice(1).filter(Boolean);
+  return { url, altSources: serializeAltSources(alts) };
+}
+
+// Thin inline input used for each spreadsheet cell
+function Cell({
+  value,
+  onChange,
+  onBlur,
+  placeholder = "",
+  mono = false,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+  placeholder?: string;
+  mono?: boolean;
+}) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
+      placeholder={placeholder}
+      className={`w-full px-1.5 py-1 border border-transparent hover:border-warm-300 focus:border-warm-600 focus:outline-none bg-transparent text-xs rounded ${mono ? "font-mono" : ""}`}
+    />
+  );
+}
+
+// One editable row — auto-saves on blur of any field
+function EditableRow({
+  incident,
+  onDelete,
+  onProcessDone,
+}: {
+  incident: Incident;
+  onDelete: (id: number) => void;
+  onProcessDone: () => void;
+}) {
+  const [fields, setFields] = useState({
+    sources: toSourcesField(incident.url, incident.altSources),
+    headline: incident.headline || "",
+    date: incident.date || "",
+    location: incident.location || "",
+    incidentType: incident.incidentType || "",
+    country: incident.country || "",
+    summary: incident.summary || "",
+  });
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
+  const update = (field: keyof typeof fields, value: string) => {
+    setFields((prev) => ({ ...prev, [field]: value }));
+    setDirty(true);
+  };
+
+  const save = async () => {
+    if (!dirty) return;
+    const { url, altSources } = fromSourcesField(fields.sources);
+    if (!url) return;
+    setSaving(true);
+    try {
+      await updateIncidentData(incident.id, {
+        url,
+        altSources,
+        headline: fields.headline || null,
+        date: fields.date || null,
+        location: fields.location || null,
+        summary: fields.summary || null,
+        incidentType: fields.incidentType || null,
+        country: fields.country || null,
+      });
+      setDirty(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleProcess = async () => {
+    setProcessing(true);
+    try {
+      await processIncident(incident.id);
+      onProcessDone();
+    } catch (e: any) {
+      alert("Scrape failed: " + e.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const statusColors: Record<string, string> = {
     RAW: "bg-yellow-100 text-yellow-800",
     PROCESSING: "bg-blue-100 text-blue-800",
     COMPLETE: "bg-green-100 text-green-800",
     FAILED: "bg-red-100 text-red-800",
   };
-  return (
-    <span className={`px-2 py-0.5 text-xs font-medium ${colors[status] || "bg-warm-100 text-warm-600"}`}>
-      {status}
-    </span>
-  );
-}
 
-function AltSourcesEditor({
-  sources,
-  onChange,
-}: {
-  sources: string[];
-  onChange: (sources: string[]) => void;
-}) {
   return (
-    <div className="space-y-1">
-      {sources.map((src, i) => (
-        <div key={i} className="flex gap-1.5">
-          <input
-            name="altSources[]"
-            value={src}
-            onChange={(e) => {
-              const next = [...sources];
-              next[i] = e.target.value;
-              onChange(next);
-            }}
-            placeholder="https://..."
-            className="flex-1 px-2 py-1 border border-warm-300 text-xs focus:outline-none focus:border-warm-900"
-          />
-          <button
-            type="button"
-            onClick={() => onChange(sources.filter((_, j) => j !== i))}
-            className="px-1.5 text-warm-400 hover:text-red-600 text-base leading-none"
-            title="Remove"
+    <tr
+      className={`border-b border-warm-100 align-middle ${
+        dirty ? "bg-amber-50" : "hover:bg-warm-50"
+      }`}
+    >
+      {/* Status */}
+      <td className="px-2 py-1.5 whitespace-nowrap">
+        <span
+          className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+            statusColors[incident.status] || "bg-warm-100 text-warm-600"
+          }`}
+        >
+          {incident.status}
+        </span>
+        {saving && (
+          <span className="block text-xs text-warm-400 mt-0.5">saving…</span>
+        )}
+        {incident.status === "FAILED" && incident.errorMessage && (
+          <span
+            className="block text-xs text-red-400 mt-0.5 max-w-[90px] truncate"
+            title={incident.errorMessage}
           >
-            ×
+            {incident.errorMessage}
+          </span>
+        )}
+      </td>
+
+      {/* Sources: primary url + alt sources comma-separated */}
+      <td className="py-1">
+        <Cell
+          value={fields.sources}
+          onChange={(v) => update("sources", v)}
+          onBlur={save}
+          placeholder="https://..."
+          mono
+        />
+      </td>
+
+      {/* Headline */}
+      <td className="py-1">
+        <Cell
+          value={fields.headline}
+          onChange={(v) => update("headline", v)}
+          onBlur={save}
+          placeholder="Headline"
+        />
+      </td>
+
+      {/* Date */}
+      <td className="py-1">
+        <Cell
+          value={fields.date}
+          onChange={(v) => update("date", v)}
+          onBlur={save}
+          placeholder="Date"
+        />
+      </td>
+
+      {/* Location */}
+      <td className="py-1">
+        <Cell
+          value={fields.location}
+          onChange={(v) => update("location", v)}
+          onBlur={save}
+          placeholder="Location"
+        />
+      </td>
+
+      {/* Incident Type */}
+      <td className="py-1">
+        <Cell
+          value={fields.incidentType}
+          onChange={(v) => update("incidentType", v)}
+          onBlur={save}
+          placeholder="Type"
+        />
+      </td>
+
+      {/* Country */}
+      <td className="py-1">
+        <Cell
+          value={fields.country}
+          onChange={(v) => update("country", v)}
+          onBlur={save}
+          placeholder="Country"
+        />
+      </td>
+
+      {/* Summary */}
+      <td className="py-1">
+        <Cell
+          value={fields.summary}
+          onChange={(v) => update("summary", v)}
+          onBlur={save}
+          placeholder="Summary"
+        />
+      </td>
+
+      {/* Actions */}
+      <td className="px-2 py-1.5 whitespace-nowrap">
+        <div className="flex flex-col gap-1">
+          <button
+            onClick={handleProcess}
+            disabled={processing}
+            className="text-blue-600 hover:text-blue-800 text-xs underline disabled:opacity-50 text-left"
+          >
+            {processing ? "…" : "Scrape"}
+          </button>
+          <button
+            onClick={() => onDelete(incident.id)}
+            className="text-red-500 hover:text-red-700 text-xs underline text-left"
+          >
+            Del
           </button>
         </div>
-      ))}
-      <button
-        type="button"
-        onClick={() => onChange([...sources, ""])}
-        className="text-xs text-warm-500 hover:text-warm-900 underline"
-      >
-        + Add source
-      </button>
-    </div>
-  );
-}
-
-function EditRow({
-  incident,
-  onClose,
-}: {
-  incident: Incident;
-  onClose: () => void;
-}) {
-  const [isPending, setIsPending] = useState(false);
-  const [altSources, setAltSources] = useState<string[]>(
-    parseAltSources(incident.altSources)
-  );
-
-  return (
-    <tr className="bg-warm-50">
-      <td colSpan={7} className="p-4">
-
-        <form
-          action={async (formData) => {
-            setIsPending(true);
-            try {
-              await updateIncident(incident.id, formData);
-              onClose();
-            } finally {
-              setIsPending(false);
-            }
-          }}
-          className="grid grid-cols-2 gap-3"
-        >
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-warm-500 mb-1">URL</label>
-            <input name="url" defaultValue={incident.url} className="w-full px-2 py-1.5 border border-warm-300 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-warm-500 mb-1">Headline</label>
-            <input name="headline" defaultValue={incident.headline || ""} className="w-full px-2 py-1.5 border border-warm-300 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-warm-500 mb-1">Date</label>
-            <input name="date" defaultValue={incident.date || ""} className="w-full px-2 py-1.5 border border-warm-300 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-warm-500 mb-1">Location</label>
-            <input name="location" defaultValue={incident.location || ""} className="w-full px-2 py-1.5 border border-warm-300 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-warm-500 mb-1">Incident Type</label>
-            <input name="incidentType" defaultValue={incident.incidentType || ""} className="w-full px-2 py-1.5 border border-warm-300 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-warm-500 mb-1">Country</label>
-            <input name="country" defaultValue={incident.country || ""} className="w-full px-2 py-1.5 border border-warm-300 text-sm" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-warm-500 mb-1">Summary</label>
-            <textarea name="summary" defaultValue={incident.summary || ""} rows={3} className="w-full px-2 py-1.5 border border-warm-300 text-sm" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-warm-500 mb-1">Additional Sources</label>
-            <AltSourcesEditor sources={altSources} onChange={setAltSources} />
-          </div>
-          <div className="col-span-2 flex gap-2">
-            <button type="submit" disabled={isPending} className="px-3 py-1.5 bg-warm-900 text-white text-sm disabled:opacity-50">
-              {isPending ? "Saving..." : "Save"}
-            </button>
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-sm text-warm-500">
-              Cancel
-            </button>
-          </div>
-        </form>
       </td>
     </tr>
   );
 }
 
 export function IncidentTable({ incidents }: { incidents: Incident[] }) {
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [processingId, setProcessingId] = useState<number | null>(null);
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [bulkText, setBulkText] = useState("");
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
+  const [bulkAdding, setBulkAdding] = useState(false);
   const [deduping, setDeduping] = useState(false);
   const [dedupeMsg, setDedupeMsg] = useState<string | null>(null);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeMsg, setScrapeMsg] = useState<string | null>(null);
 
   const filtered = incidents.filter((inc) => {
     if (statusFilter !== "ALL" && inc.status !== statusFilter) return false;
@@ -174,34 +285,105 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
     );
   });
 
-  async function handleDeduplicate() {
-    if (!confirm("Scan all incidents for duplicates about the same individual and auto-merge them using AI? This may take a minute.")) return;
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this incident?")) return;
+    await deleteIncident(id);
+    router.refresh();
+  };
+
+  const handleBulkAdd = async () => {
+    if (!bulkText.trim()) return;
+    setBulkAdding(true);
+    setBulkMsg(null);
+    try {
+      const result = await bulkAddUrls(bulkText);
+      setBulkMsg(
+        `Added ${result.created} new incidents (${result.skipped} already existed). Scraping in background…`
+      );
+      setBulkText("");
+      router.refresh();
+    } catch (e: any) {
+      setBulkMsg("Error: " + e.message);
+    } finally {
+      setBulkAdding(false);
+    }
+  };
+
+  const handleDeduplicate = async () => {
+    if (
+      !confirm(
+        "Scan all incidents for duplicates about the same individual and auto-merge using AI? This may take a minute."
+      )
+    )
+      return;
     setDeduping(true);
     setDedupeMsg(null);
     try {
       const result = await findAndMergeDuplicates();
       setDedupeMsg(result.message);
+      router.refresh();
     } catch (e: any) {
       setDedupeMsg("Error: " + e.message);
     } finally {
       setDeduping(false);
     }
-  }
+  };
+
+  const handleScrapeAll = async () => {
+    setScraping(true);
+    setScrapeMsg(null);
+    try {
+      const msg = await processAllIncomplete();
+      setScrapeMsg(msg);
+      router.refresh();
+    } catch (e: any) {
+      setScrapeMsg("Error: " + e.message);
+    } finally {
+      setScraping(false);
+    }
+  };
 
   return (
     <div>
-      <div className="flex flex-wrap gap-3 mb-4 items-center">
+      {/* ── Bulk URL add ─────────────────────────────────────── */}
+      <div className="mb-5 p-4 border border-warm-200 bg-warm-50 rounded-md">
+        <label className="block text-xs font-semibold text-warm-700 mb-2 uppercase tracking-wide">
+          Add URLs
+        </label>
+        <textarea
+          value={bulkText}
+          onChange={(e) => setBulkText(e.target.value)}
+          rows={4}
+          placeholder={
+            "Paste one or more URLs — one per line, or comma-separated.\nEach URL becomes its own row and will be scraped automatically.\n\nhttps://nytimes.com/...\nhttps://apnews.com/..."
+          }
+          className="w-full px-3 py-2 border border-warm-300 bg-white text-xs font-mono focus:outline-none focus:border-warm-600 rounded resize-y"
+        />
+        <div className="flex items-center gap-3 mt-2">
+          <button
+            onClick={handleBulkAdd}
+            disabled={bulkAdding || !bulkText.trim()}
+            className="px-3 py-1.5 bg-warm-900 text-white text-sm font-medium hover:bg-warm-700 disabled:opacity-50 rounded"
+          >
+            {bulkAdding ? "Adding…" : "Add & Scrape"}
+          </button>
+          {bulkMsg && <span className="text-xs text-warm-500">{bulkMsg}</span>}
+        </div>
+      </div>
+
+      {/* ── Toolbar ──────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 mb-3 items-center">
         <input
           type="text"
-          placeholder="Search by headline, URL, location, type..."
+          placeholder="Search headline, URL, location, type…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-64 px-3 py-2 border border-warm-300 bg-white text-sm rounded-md focus:outline-none focus:border-warm-500"
+          className="flex-1 min-w-48 px-3 py-1.5 border border-warm-300 bg-white text-sm rounded-md focus:outline-none focus:border-warm-500"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-warm-300 bg-white text-sm rounded-md focus:outline-none focus:border-warm-500"
+          className="px-3 py-1.5 border border-warm-300 bg-white text-sm rounded-md focus:outline-none"
         >
           <option value="ALL">All statuses</option>
           <option value="RAW">RAW</option>
@@ -213,116 +395,62 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
           {filtered.length} of {incidents.length}
         </span>
         <button
+          onClick={handleScrapeAll}
+          disabled={scraping}
+          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 rounded-md"
+        >
+          {scraping ? "Scraping…" : "Scrape All RAW"}
+        </button>
+        <button
           onClick={handleDeduplicate}
           disabled={deduping}
-          className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 rounded-md"
+          className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 rounded-md"
         >
-          {deduping ? "Finding duplicates..." : "Auto-deduplicate"}
+          {deduping ? "Finding…" : "Auto-deduplicate"}
         </button>
-        {dedupeMsg && (
-          <span className="text-xs text-warm-500">{dedupeMsg}</span>
-        )}
+        {scrapeMsg && <span className="text-xs text-warm-500">{scrapeMsg}</span>}
+        {dedupeMsg && <span className="text-xs text-warm-500">{dedupeMsg}</span>}
       </div>
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm table-fixed">
-        <colgroup>
-          <col className="w-[80px]" />
-          <col className="w-[28%]" />
-          <col className="w-[80px]" />
-          <col className="w-[12%]" />
-          <col className="w-[14%]" />
-          <col className="w-[18%]" />
-          <col className="w-[100px]" />
-        </colgroup>
-        <thead>
-          <tr className="border-b border-warm-300 text-left">
-            <th className="py-2 pr-3 font-medium text-warm-500">Status</th>
-            <th className="py-2 pr-3 font-medium text-warm-500">Headline</th>
-            <th className="py-2 pr-3 font-medium text-warm-500">Date</th>
-            <th className="py-2 pr-3 font-medium text-warm-500">Location</th>
-            <th className="py-2 pr-3 font-medium text-warm-500">Type</th>
-            <th className="py-2 pr-3 font-medium text-warm-500">URL</th>
-            <th className="py-2 font-medium text-warm-500">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((inc) =>
-            editingId === inc.id ? (
-              <EditRow
+
+      {/* ── Spreadsheet table ───────────────────────────────── */}
+      <div className="overflow-x-auto border border-warm-200 rounded-md">
+        <table className="w-full text-xs" style={{ minWidth: "1500px" }}>
+          <colgroup>
+            <col style={{ width: "90px" }} />
+            <col style={{ width: "220px" }} />
+            <col style={{ width: "240px" }} />
+            <col style={{ width: "100px" }} />
+            <col style={{ width: "130px" }} />
+            <col style={{ width: "130px" }} />
+            <col style={{ width: "100px" }} />
+            <col />
+            <col style={{ width: "60px" }} />
+          </colgroup>
+          <thead>
+            <tr className="bg-warm-100 border-b border-warm-200 text-left text-warm-600 font-semibold uppercase tracking-wide text-[10px]">
+              <th className="px-2 py-2">Status</th>
+              <th className="px-2 py-2">Sources (comma-sep)</th>
+              <th className="px-2 py-2">Headline</th>
+              <th className="px-2 py-2">Date</th>
+              <th className="px-2 py-2">Location</th>
+              <th className="px-2 py-2">Type</th>
+              <th className="px-2 py-2">Country</th>
+              <th className="px-2 py-2">Summary</th>
+              <th className="px-2 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((inc) => (
+              <EditableRow
                 key={inc.id}
                 incident={inc}
-                onClose={() => setEditingId(null)}
+                onDelete={handleDelete}
+                onProcessDone={() => router.refresh()}
               />
-            ) : (
-              <tr key={inc.id} className="border-b border-warm-100 hover:bg-warm-50">
-                <td className="py-2 pr-3 align-top">
-                  <StatusBadge status={inc.status} />
-                  {inc.status === "FAILED" && inc.errorMessage && (
-                    <span className="block text-xs text-red-500 mt-0.5 max-w-32 truncate" title={inc.errorMessage}>
-                      {inc.errorMessage}
-                    </span>
-                  )}
-                </td>
-                <td className="py-2 pr-3 truncate" title={inc.headline || ""}>
-                  {inc.headline || <span className="text-warm-300 italic">No headline</span>}
-                  {parseAltSources(inc.altSources).length > 0 && (
-                    <span className="ml-1 text-xs text-indigo-500" title="Has additional sources">
-                      +{parseAltSources(inc.altSources).length}
-                    </span>
-                  )}
-                </td>
-                <td className="py-2 pr-3 truncate">{inc.date || "—"}</td>
-                <td className="py-2 pr-3 truncate">{inc.location || "—"}</td>
-                <td className="py-2 pr-3 truncate" title={inc.incidentType || ""}>
-                  {inc.incidentType || "—"}
-                </td>
-                <td className="py-2 pr-3 truncate">
-                  <a href={inc.url} target="_blank" rel="noopener" className="text-blue-600 hover:underline">
-                    {inc.url.replace(/https?:\/\/(www\.)?/, "").slice(0, 40)}...
-                  </a>
-                </td>
-                <td className="py-2 whitespace-nowrap">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setEditingId(inc.id)}
-                      className="text-warm-500 hover:text-warm-900 text-xs underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={async () => {
-                        setProcessingId(inc.id);
-                        try {
-                          await processIncident(inc.id);
-                        } catch (e: any) {
-                          alert("Scrape failed: " + e.message);
-                        } finally {
-                          setProcessingId(null);
-                        }
-                      }}
-                      disabled={processingId === inc.id}
-                      className="text-blue-600 hover:text-blue-800 text-xs underline disabled:opacity-50"
-                    >
-                      {processingId === inc.id ? "..." : "Scrape"}
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (confirm("Delete this incident?")) {
-                          await deleteIncident(inc.id);
-                        }
-                      }}
-                      className="text-red-500 hover:text-red-700 text-xs underline"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )
-          )}
-        </tbody>
-      </table>
-    </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

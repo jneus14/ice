@@ -135,6 +135,68 @@ export async function mergeIncidents(ids: number[]) {
   return { survivingId: primary.id };
 }
 
+export async function updateIncidentData(
+  id: number,
+  data: {
+    url: string;
+    altSources: string | null;
+    headline: string | null;
+    date: string | null;
+    location: string | null;
+    summary: string | null;
+    incidentType: string | null;
+    country: string | null;
+  }
+) {
+  await requireAdmin();
+  await prisma.incident.update({ where: { id }, data });
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+export async function bulkAddUrls(
+  rawText: string
+): Promise<{ created: number; skipped: number }> {
+  await requireAdmin();
+
+  const urls = rawText
+    .split(/[\n,]+/)
+    .map((u) => u.trim())
+    .filter((u) => u.startsWith("http"))
+    .map((u) => {
+      try {
+        const parsed = new URL(u);
+        ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach((p) =>
+          parsed.searchParams.delete(p)
+        );
+        return parsed.toString();
+      } catch {
+        return u;
+      }
+    });
+
+  const existing = await prisma.incident.findMany({
+    where: { url: { in: urls } },
+    select: { url: true },
+  });
+  const existingSet = new Set(existing.map((e) => e.url));
+
+  const newUrls = urls.filter((u) => !existingSet.has(u));
+
+  for (const url of newUrls) {
+    const inc = await prisma.incident.create({ data: { url, status: "RAW" } });
+    // Fire-and-forget pipeline
+    processIncidentPipeline(inc.id).catch((err) =>
+      console.error(`Pipeline failed for ${inc.id}:`, err.message)
+    );
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+
+  return { created: newUrls.length, skipped: urls.length - newUrls.length };
+}
+
 export async function findAndMergeDuplicates(): Promise<{ merged: number; message: string }> {
   await requireAdmin();
 

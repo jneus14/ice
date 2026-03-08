@@ -23,8 +23,8 @@ function formatDate(dateStr: string | null): string | null {
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
 }
 
-const incidentTypeSet = new Set(INCIDENT_TYPE_TAGS.map((t) => t.value));
-const personImpactedSet = new Set(PERSON_IMPACTED_TAGS.map((t) => t.value));
+const incidentTypeSet = new Set<string>(INCIDENT_TYPE_TAGS.map((t) => t.value));
+const personImpactedSet = new Set<string>(PERSON_IMPACTED_TAGS.map((t) => t.value));
 
 function getTagLabel(value: string): string {
   return (
