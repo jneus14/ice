@@ -13,7 +13,6 @@ type MapIncident = {
   incidentType: string | null;
 };
 
-// Dynamically import the actual map to avoid SSR issues with leaflet
 const MapInner = dynamic(
   () => import("./incident-map-inner").then((mod) => mod.MapInner),
   {
@@ -27,42 +26,32 @@ const MapInner = dynamic(
 );
 
 export function IncidentMap({ incidents }: { incidents: MapIncident[] }) {
-  const [showMap, setShowMap] = useState(false);
+  const [showMap, setShowMap] = useState(true);
 
   return (
     <div className="mb-6">
-      <button
-        onClick={() => setShowMap(!showMap)}
-        className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-warm-300 bg-white text-warm-700 hover:border-warm-400 transition-colors mb-3"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-          <circle cx="12" cy="10" r="3" />
-        </svg>
-        {showMap ? "Hide Map" : `Show Map (${incidents.length} located)`}
-      </button>
-
       {showMap && (
         <>
           <link
             rel="stylesheet"
             href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           />
-          <div className="rounded-lg overflow-hidden border border-warm-200 h-[400px]">
+          <div className="rounded-lg overflow-hidden border border-warm-200 h-[420px] mb-2">
             <MapInner incidents={incidents} />
           </div>
         </>
       )}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-warm-400">
+          {incidents.length} incidents with known locations
+        </p>
+        <button
+          onClick={() => setShowMap(!showMap)}
+          className="text-xs text-warm-400 hover:text-warm-700 underline"
+        >
+          {showMap ? "Hide map" : "Show map"}
+        </button>
+      </div>
     </div>
   );
 }
