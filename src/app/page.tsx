@@ -1,13 +1,10 @@
-import { Suspense } from "react";
-import { SearchFilters } from "@/components/search-filters";
-import { IncidentList } from "@/components/incident-list";
 import {
   getIncidents,
   getDistinctCountries,
   getTotalWithHeadline,
   getMapIncidents,
 } from "@/lib/queries";
-import { IncidentMap } from "@/components/incident-map";
+import { PageLayout } from "@/components/page-layout";
 
 export default async function Home({
   searchParams,
@@ -42,18 +39,14 @@ export default async function Home({
   const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <>
-      {mapIncidents.length > 0 && <IncidentMap incidents={mapIncidents} />}
-      <Suspense fallback={null}>
-        <SearchFilters countries={countries} />
-      </Suspense>
-      <IncidentList
-        incidents={incidents}
-        total={total}
-        totalAll={totalAll}
-        page={page}
-        totalPages={totalPages}
-      />
-    </>
+    <PageLayout
+      mapIncidents={mapIncidents}
+      countries={countries}
+      incidents={incidents}
+      total={total}
+      totalAll={totalAll}
+      page={page}
+      totalPages={totalPages}
+    />
   );
 }
