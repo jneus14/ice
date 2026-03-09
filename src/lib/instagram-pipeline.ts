@@ -154,25 +154,13 @@ async function findNewsArticles(
     }
   };
 
-  // Strategy 1: findSimilar on the Instagram URL itself
-  try {
-    const similar = await exa.findSimilar(instagramUrl, {
-      numResults: 6,
-      excludeDomains: SOCIAL_DOMAINS,
-      contents: { text: { maxCharacters: 4000 } as any },
-    });
-    (similar.results ?? []).forEach(add);
-  } catch (err: any) {
-    console.warn("[instagram-pipeline] findSimilar failed:", err.message);
-  }
-
-  // Strategy 2: news search using caption/vision description as query
-  if (searchQuery && results.length < 3) {
+  // Strategy 1: keyword news search from caption/vision (primary — finds actual news articles)
+  if (searchQuery) {
     try {
       const searched = await (exa as any).search(
         `ICE immigration enforcement: ${searchQuery.slice(0, 250)}`,
         {
-          numResults: 6,
+          numResults: 8,
           type: "news",
           excludeDomains: SOCIAL_DOMAINS,
           contents: { text: { maxCharacters: 4000 } },
@@ -180,7 +168,21 @@ async function findNewsArticles(
       );
       (searched.results ?? []).forEach(add);
     } catch (err: any) {
-      console.warn("[instagram-pipeline] search failed:", err.message);
+      console.warn("[instagram-pipeline] keyword search failed:", err.message);
+    }
+  }
+
+  // Strategy 2: findSimilar as fallback if keyword search didn't find enough
+  if (results.length < 2) {
+    try {
+      const similar = await exa.findSimilar(instagramUrl, {
+        numResults: 6,
+        excludeDomains: SOCIAL_DOMAINS,
+        contents: { text: { maxCharacters: 4000 } as any },
+      });
+      (similar.results ?? []).forEach(add);
+    } catch (err: any) {
+      console.warn("[instagram-pipeline] findSimilar failed:", err.message);
     }
   }
 
@@ -266,8 +268,8 @@ export async function processInstagramPipeline(incidentId: number): Promise<void
     });
 
     // ── Step 5: Build alt sources ───────────────────────────────────────────
-    // The Instagram post stays as the primary URL; news articles go into altSources
-    const altSourceUrls = articles.slice(1, 5).map((r) => r.url);
+    // The Instagram post stays as the primary URL; all news articles go into altSources
+    const altSourceUrls = articles.slice(0, 5).map((r) => r.url);
 
     // ── Step 6: Geocode ────────────────────────────────────────────────────
     const finalLocation = incident.location ?? extracted.location;

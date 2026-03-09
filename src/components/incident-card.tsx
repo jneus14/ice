@@ -38,6 +38,65 @@ function formatDate(dateStr: string | null): string | null {
   return dateStr;
 }
 
+const SOURCE_NAMES: Record<string, string> = {
+  "nytimes.com": "New York Times",
+  "washingtonpost.com": "Washington Post",
+  "theguardian.com": "The Guardian",
+  "bbc.com": "BBC",
+  "bbc.co.uk": "BBC",
+  "apnews.com": "Associated Press",
+  "cnn.com": "CNN",
+  "nbcnews.com": "NBC News",
+  "msnbc.com": "MSNBC",
+  "abcnews.go.com": "ABC News",
+  "cbsnews.com": "CBS News",
+  "reuters.com": "Reuters",
+  "politico.com": "Politico",
+  "axios.com": "Axios",
+  "npr.org": "NPR",
+  "thehill.com": "The Hill",
+  "huffpost.com": "HuffPost",
+  "propublica.org": "ProPublica",
+  "usatoday.com": "USA Today",
+  "latimes.com": "Los Angeles Times",
+  "chicagotribune.com": "Chicago Tribune",
+  "nypost.com": "New York Post",
+  "foxnews.com": "Fox News",
+  "democracynow.org": "Democracy Now",
+  "thedailybeast.com": "The Daily Beast",
+  "vice.com": "VICE",
+  "aclu.org": "ACLU",
+  "immigrant-rights.org": "Immigrant Rights",
+  "nilc.org": "NILC",
+  "cato.org": "Cato Institute",
+  "migrationpolicy.org": "Migration Policy Institute",
+  "instagram.com": "Instagram",
+  "youtube.com": "YouTube",
+  "twitter.com": "Twitter/X",
+  "x.com": "Twitter/X",
+  "facebook.com": "Facebook",
+};
+
+const SOCIAL_HOSTS = new Set(["instagram.com", "facebook.com", "tiktok.com", "twitter.com", "x.com"]);
+
+function getSourceName(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return SOURCE_NAMES[host] ?? host;
+  } catch {
+    return url;
+  }
+}
+
+function isSocial(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return SOCIAL_HOSTS.has(host);
+  } catch {
+    return false;
+  }
+}
+
 const incidentTypeSet = new Set<string>(INCIDENT_TYPE_TAGS.map((t) => t.value));
 const personImpactedSet = new Set<string>(PERSON_IMPACTED_TAGS.map((t) => t.value));
 
@@ -65,7 +124,10 @@ export function IncidentCard({ incident }: { incident: Incident }) {
     (t) => !incidentTypeSet.has(t) && !personImpactedSet.has(t)
   );
 
-  const allSources = [incident.url, ...parseAltSources(incident.altSources)];
+  const allSources = [...new Set([incident.url, ...parseAltSources(incident.altSources)])];
+
+  // Best source to show prominently = first non-social URL
+  const primarySource = allSources.find((s) => !isSocial(s)) ?? allSources[0];
   const hasMeta = incident.date || incident.location || incident.country;
 
   return (
@@ -80,6 +142,17 @@ export function IncidentCard({ incident }: { incident: Incident }) {
           <h3 className="font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors">
             {incident.headline || "Untitled incident"}
           </h3>
+
+          {/* Source name — shown right after headline */}
+          <a
+            href={primarySource}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-block mt-0.5 text-[0.72rem] font-medium text-orange-500 hover:text-orange-700 hover:underline transition-colors"
+          >
+            {getSourceName(primarySource)}
+          </a>
 
           {/* Date · Location · Country */}
           {hasMeta && (
@@ -146,7 +219,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
                 </p>
               )}
               <div className="flex flex-col gap-1">
-                {[...new Set(allSources)].map((src, i) => (
+                {allSources.map((src) => (
                   <a
                     key={src}
                     href={src}
@@ -155,7 +228,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
                     onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center gap-1 text-sm text-warm-700 hover:text-orange-600 underline underline-offset-2 transition-colors"
                   >
-                    {i === 0 ? "Read source" : `Additional source ${i}`}
+                    {getSourceName(src)}
                     <span aria-hidden>→</span>
                   </a>
                 ))}
