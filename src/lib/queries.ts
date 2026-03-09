@@ -123,7 +123,7 @@ export async function getMapIncidents() {
 
 export async function getDistinctCountries(): Promise<string[]> {
   const results = await prisma.incident.findMany({
-    where: { country: { not: null } },
+    where: { country: { not: null }, headline: { not: null } },
     select: { country: true },
     distinct: ["country"],
     orderBy: { country: "asc" },
