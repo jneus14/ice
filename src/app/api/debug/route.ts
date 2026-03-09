@@ -11,8 +11,16 @@ export async function GET() {
 
   try {
     const count = await prisma.incident.count();
+    const withHeadline = await prisma.incident.count({ where: { headline: { not: null } } });
+    const withCoords = await prisma.incident.count({ where: { latitude: { not: null }, longitude: { not: null } } });
+    const byStatus = await prisma.incident.groupBy({ by: ["status"], _count: { id: true } });
+    const newest = await prisma.incident.findFirst({ orderBy: { id: "desc" }, select: { id: true, headline: true, createdAt: true } });
     info.db_status = "OK";
-    info.incident_count = count;
+    info.incident_count_total = count;
+    info.incident_count_with_headline = withHeadline;
+    info.incident_count_with_coords = withCoords;
+    info.incident_by_status = Object.fromEntries(byStatus.map(s => [s.status, s._count.id]));
+    info.newest_incident = newest;
   } catch (err: unknown) {
     info.db_status = "ERROR";
     info.db_error =
