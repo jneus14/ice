@@ -19,10 +19,23 @@ type Incident = {
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function formatDate(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  const d = new Date(dateStr + "T12:00:00Z");
-  if (isNaN(d.getTime())) return null;
-  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+  if (!dateStr || dateStr === "null") return null;
+  // ISO format: YYYY-MM-DD
+  const iso = new Date(dateStr + "T12:00:00Z");
+  if (!isNaN(iso.getTime())) {
+    return `${MONTHS[iso.getUTCMonth()]} ${iso.getUTCDate()}, ${iso.getUTCFullYear()}`;
+  }
+  // M/D/YYYY or M/D
+  const parts = dateStr.split("/");
+  if (parts.length >= 2) {
+    const m = parseInt(parts[0], 10);
+    const d = parseInt(parts[1], 10);
+    const y = parts.length >= 3 ? parseInt(parts[2], 10) : null;
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return y ? `${MONTHS[m - 1]} ${d}, ${y}` : `${MONTHS[m - 1]} ${d}`;
+    }
+  }
+  return dateStr;
 }
 
 const incidentTypeSet = new Set<string>(INCIDENT_TYPE_TAGS.map((t) => t.value));
@@ -92,7 +105,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
             <div className="flex flex-wrap gap-1.5 mt-2">
               {incidentTypeTags.map((tag) => (
                 <span
-                  key={tag}
+                  key={`it:${tag}`}
                   className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200"
                 >
                   {getTagLabel(tag)}
@@ -100,7 +113,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
               ))}
               {personImpactedTags.map((tag) => (
                 <span
-                  key={tag}
+                  key={`pi:${tag}`}
                   className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200"
                 >
                   {getTagLabel(tag)}
@@ -108,7 +121,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
               ))}
               {otherTags.map((tag) => (
                 <span
-                  key={tag}
+                  key={`ot:${tag}`}
                   className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-warm-100 text-warm-500 border border-warm-200"
                 >
                   {tag}
