@@ -29,7 +29,7 @@ function getDateCutoff(range: string): Date | null {
 }
 
 export async function getIncidents(filters: IncidentFilters = {}) {
-  const { search, tags, location, country, range, page = 1, pageSize = 50 } = filters;
+  const { search, tags, location, country, range, dateFrom, dateTo, page = 1, pageSize = 50 } = filters;
 
   const where: any = {};
   const AND: any[] = [];
@@ -65,6 +65,13 @@ export async function getIncidents(filters: IncidentFilters = {}) {
     if (cutoff) {
       AND.push({ parsedDate: { gte: cutoff } });
     }
+  }
+
+  if (dateFrom) {
+    AND.push({ parsedDate: { gte: new Date(dateFrom) } });
+  }
+  if (dateTo) {
+    AND.push({ parsedDate: { lte: new Date(dateTo + "T23:59:59Z") } });
   }
 
   // Only show incidents that have a headline on the public site
@@ -125,8 +132,14 @@ export async function getDistinctCountries(): Promise<string[]> {
   const results = await prisma.incident.findMany({
     where: { country: { not: null }, headline: { not: null } },
     select: { country: true },
-    distinct: ["country"],
-    orderBy: { country: "asc" },
   });
-  return results.map((r) => r.country!).filter(Boolean);
+  const all = new Set<string>();
+  for (const r of results) {
+    if (!r.country) continue;
+    r.country.split(",").forEach((c) => {
+      const trimmed = c.trim();
+      if (trimmed) all.add(trimmed);
+    });
+  }
+  return Array.from(all).sort();
 }

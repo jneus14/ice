@@ -18,6 +18,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
   const currentLocation = searchParams.get("location") || "";
   const currentDateFrom = searchParams.get("from") || "";
   const currentDateTo = searchParams.get("to") || "";
+  const currentRange = searchParams.get("range") || "";
 
   const hasFilters =
     currentSearch ||
@@ -25,7 +26,8 @@ export function SearchFilters({ countries }: { countries: string[] }) {
     currentCountry ||
     currentLocation ||
     currentDateFrom ||
-    currentDateTo;
+    currentDateTo ||
+    currentRange;
 
   const updateFilters = useCallback(
     (updates: Record<string, string | string[] | null>) => {
@@ -86,7 +88,34 @@ export function SearchFilters({ countries }: { countries: string[] }) {
         />
       </div>
 
-      {/* Location + dates row */}
+      {/* Quick date range buttons */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { label: "Past week", value: "week" },
+          { label: "Past month", value: "month" },
+          { label: "Past 3 months", value: "3months" },
+          { label: "Past year", value: "year" },
+        ].map(({ label, value }) => {
+          const active = currentRange === value;
+          return (
+            <button
+              key={value}
+              onClick={() =>
+                updateFilters({ range: active ? null : value, from: null, to: null })
+              }
+              className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                active
+                  ? "bg-warm-800 text-white border-warm-800"
+                  : "bg-white text-warm-600 border-warm-300 hover:border-warm-500"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Location + custom date range row */}
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
@@ -106,14 +135,18 @@ export function SearchFilters({ countries }: { countries: string[] }) {
           <input
             type="date"
             value={currentDateFrom}
-            onChange={(e) => updateFilters({ from: e.target.value || null })}
+            onChange={(e) =>
+              updateFilters({ from: e.target.value || null, range: null })
+            }
             className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500"
           />
           <span className="text-sm text-warm-500">To</span>
           <input
             type="date"
             value={currentDateTo}
-            onChange={(e) => updateFilters({ to: e.target.value || null })}
+            onChange={(e) =>
+              updateFilters({ to: e.target.value || null, range: null })
+            }
             className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500"
           />
         </div>

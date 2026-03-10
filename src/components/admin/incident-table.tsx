@@ -262,6 +262,7 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortBy, setSortBy] = useState<"createdAt_desc" | "date_desc" | "date_asc">("createdAt_desc");
   const [bulkText, setBulkText] = useState("");
   const [bulkMsg, setBulkMsg] = useState<string | null>(null);
   const [bulkAdding, setBulkAdding] = useState(false);
@@ -270,20 +271,40 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
   const [scraping, setScraping] = useState(false);
   const [scrapeMsg, setScrapeMsg] = useState<string | null>(null);
 
-  const filtered = incidents.filter((inc) => {
-    if (statusFilter !== "ALL" && inc.status !== statusFilter) return false;
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      inc.headline?.toLowerCase().includes(q) ||
-      inc.url.toLowerCase().includes(q) ||
-      inc.location?.toLowerCase().includes(q) ||
-      inc.summary?.toLowerCase().includes(q) ||
-      inc.incidentType?.toLowerCase().includes(q) ||
-      inc.country?.toLowerCase().includes(q) ||
-      inc.date?.toLowerCase().includes(q)
-    );
-  });
+  const filtered = incidents
+    .filter((inc) => {
+      if (statusFilter !== "ALL" && inc.status !== statusFilter) return false;
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        inc.headline?.toLowerCase().includes(q) ||
+        inc.url.toLowerCase().includes(q) ||
+        inc.location?.toLowerCase().includes(q) ||
+        inc.summary?.toLowerCase().includes(q) ||
+        inc.incidentType?.toLowerCase().includes(q) ||
+        inc.country?.toLowerCase().includes(q) ||
+        inc.date?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === "createdAt_desc") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      const parseDate = (d: string | null) => {
+        if (!d) return 0;
+        const t = new Date(d).getTime();
+        if (!isNaN(t)) return t;
+        // M/D/YYYY
+        const parts = d.split("/");
+        if (parts.length === 3) {
+          return new Date(`${parts[2]}-${parts[0].padStart(2,"0")}-${parts[1].padStart(2,"0")}`).getTime() || 0;
+        }
+        return 0;
+      };
+      const da = parseDate(a.date);
+      const db = parseDate(b.date);
+      return sortBy === "date_desc" ? db - da : da - db;
+    });
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this incident?")) return;
@@ -390,6 +411,15 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
           <option value="COMPLETE">COMPLETE</option>
           <option value="FAILED">FAILED</option>
           <option value="PROCESSING">PROCESSING</option>
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          className="px-3 py-1.5 border border-warm-300 bg-white text-sm rounded-md focus:outline-none"
+        >
+          <option value="createdAt_desc">Newest added</option>
+          <option value="date_desc">Date: newest first</option>
+          <option value="date_asc">Date: oldest first</option>
         </select>
         <span className="text-xs text-warm-400">
           {filtered.length} of {incidents.length}
