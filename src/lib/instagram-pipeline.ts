@@ -146,15 +146,29 @@ type ExaResult = {
 
 const SOCIAL_DOMAINS = [
   "instagram.com",
+  "instagr.am",   // Instagram short URL domain
   "facebook.com",
+  "fb.com",
   "tiktok.com",
   "twitter.com",
+  "t.co",         // Twitter URL shortener
   "x.com",
   "threads.net",
+  // Link shorteners predominantly used to share social posts
+  "dlvr.it",
+  "ow.ly",
+  "buff.ly",
+  "bit.ly",
 ];
 
 function isSocialUrl(url: string): boolean {
-  return SOCIAL_DOMAINS.some((d) => url.includes(d));
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return SOCIAL_DOMAINS.some((d) => host === d || host.endsWith("." + d));
+  } catch {
+    // Malformed URL — fall back to substring check (safe for obvious cases like instagr.am)
+    return SOCIAL_DOMAINS.some((d) => url.includes(d));
+  }
 }
 
 /**
@@ -169,7 +183,7 @@ async function findNewsArticles(
   try {
     const searched = await (exa as any).search(headline, {
       numResults: 5,
-      type: "news",
+      type: "keyword",
       excludeDomains: SOCIAL_DOMAINS,
       contents: { text: { maxCharacters: 4000 } },
     });
