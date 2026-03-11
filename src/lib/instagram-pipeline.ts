@@ -182,7 +182,7 @@ async function findNewsArticles(
 ): Promise<ExaResult[]> {
   try {
     const searched = await (exa as any).search(headline, {
-      numResults: 5,
+      numResults: 8,
       type: "keyword",
       excludeDomains: SOCIAL_DOMAINS,
       contents: { text: { maxCharacters: 4000 } },
@@ -193,6 +193,48 @@ async function findNewsArticles(
   } catch (err: any) {
     console.warn("[instagram-pipeline] news search failed:", err.message);
     return [];
+  }
+}
+
+/**
+ * Ask Claude whether a candidate article covers the SAME SPECIFIC incident
+ * (same person, same event) as the reference headline + summary.
+ * Returns true only if it's clearly the same incident.
+ */
+export async function verifyArticleRelevance(
+  refHeadline: string,
+  refSummary: string,
+  article: { url: string; title?: string | null; text?: string | null },
+  anthropicKey: string
+): Promise<boolean> {
+  if (!article.text || article.text.length < 100) return false;
+  try {
+    const anthropic = new Anthropic({ apiKey: anthropicKey });
+    const prompt = `You are verifying whether a news article covers the same specific incident as a reference story.
+
+Reference incident:
+Headline: ${refHeadline}
+Summary: ${refSummary}
+
+Candidate article (${article.url}):
+Title: ${article.title ?? "(no title)"}
+Text excerpt: ${article.text.slice(0, 2500)}
+
+Does this candidate article describe the SAME SPECIFIC INCIDENT — the same individual(s) and the same event?
+Answer YES only if the article clearly covers this exact incident.
+Answer NO if it is a different person, a different event, or only tangentially related (e.g. same topic but different case).
+Answer with only YES or NO.`;
+
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 5,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const answer = msg.content[0]?.type === "text" ? msg.content[0].text.trim().toUpperCase() : "NO";
+    return answer.startsWith("YES");
+  } catch (err: any) {
+    console.warn("[instagram-pipeline] relevance check failed:", err.message);
+    return false;
   }
 }
 
@@ -261,6 +303,21 @@ export async function processInstagramPipeline(incidentId: number): Promise<void
     if (searchQuery) {
       console.log(`[instagram-pipeline] Searching Exa for: "${searchQuery}"`);
       articles = await findNewsArticles(searchQuery, exa);
+    }
+
+    // ── Step 4b: Verify each article is actually about the same incident ───
+    // Use the preliminary headline + summary (from caption) as the reference.
+    // This filters out topically-similar-but-different-incident results.
+    if (articles.length > 0 && preliminary?.headline) {
+      const refHeadline = preliminary.headline;
+      const refSummary = preliminary.summary ?? "";
+      const verified: ExaResult[] = [];
+      for (const article of articles) {
+        const ok = await verifyArticleRelevance(refHeadline, refSummary, article, anthropicKey);
+        console.log(`[instagram-pipeline] ${ok ? "✓" : "✗"} relevance: ${article.url}`);
+        if (ok) verified.push(article);
+      }
+      articles = verified;
     }
 
     // ── Step 5: Extract structured data ────────────────────────────────────
