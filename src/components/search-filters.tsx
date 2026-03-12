@@ -169,8 +169,11 @@ export function SearchFilters({ countries }: { countries: string[] }) {
             })
           }
           disabled={!hasFilters}
-          className="text-sm text-warm-400 hover:text-warm-700 underline disabled:opacity-30 disabled:cursor-default disabled:no-underline"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-warm-600 bg-white border border-warm-300 rounded-md hover:bg-warm-50 hover:border-warm-400 hover:text-warm-800 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-default disabled:hover:bg-white disabled:hover:border-warm-300 disabled:hover:text-warm-600"
         >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
           Clear filters
         </button>
       </div>
