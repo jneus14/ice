@@ -1,9 +1,12 @@
 export const INCIDENT_TYPE_TAGS = [
+  { value: "Climate/Environmental", label: "Climate/Environmental" },
+  { value: "Court Process Issue", label: "Court Process Issue" },
   { value: "Death", label: "Death" },
   { value: "Deported", label: "Deportation" },
   { value: "3rd Country Deportation", label: "Third Country Deportation" },
   { value: "Detention Conditions", label: "Detention Conditions" },
   { value: "Detained", label: "Disappearance/Detention" },
+  { value: "Injury/Illness/Medical", label: "Injury/Illness/Medical" },
   { value: "Officer Misconduct", label: "Officer Misconduct" },
   { value: "Officer Use Of Force", label: "Officer Use of Force" },
   { value: "Protest / Intervention", label: "Protest/Intervention" },
@@ -12,10 +15,14 @@ export const INCIDENT_TYPE_TAGS = [
 ] as const;
 
 export const PERSON_IMPACTED_TAGS = [
+  { value: "DACA", label: "DACA/Dreamer" },
+  { value: "LGBTQ+", label: "LGBTQ+" },
   { value: "LPR", label: "LPR/Greencard Holder" },
   { value: "Minor/Family", label: "Minor/Family" },
   { value: "Native American", label: "Native American" },
+  { value: "Person with Disability", label: "Person with Disability" },
   { value: "Refugee/Asylum", label: "Refugee/Asylum Seeker" },
+  { value: "Student", label: "Student" },
   { value: "TPS", label: "Temporary Protected Status" },
   { value: "U.S. Citizen", label: "U.S. Citizen" },
   { value: "Visa / Legal Status", label: "Visa/Legal Status" },
