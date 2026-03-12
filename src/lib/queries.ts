@@ -80,7 +80,7 @@ export async function getIncidents(filters: IncidentFilters = {}) {
   const [incidents, total] = await Promise.all([
     prisma.incident.findMany({
       where,
-      orderBy: [{ parsedDate: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ parsedDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
