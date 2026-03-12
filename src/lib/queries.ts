@@ -3,6 +3,7 @@ import { prisma } from "./db";
 export type IncidentFilters = {
   search?: string;
   tags?: string[];
+  tagMode?: "all" | "any";
   location?: string;
   country?: string;
   dateFrom?: string;
@@ -29,7 +30,7 @@ function getDateCutoff(range: string): Date | null {
 }
 
 export async function getIncidents(filters: IncidentFilters = {}) {
-  const { search, tags, location, country, range, dateFrom, dateTo, page = 1, pageSize = 50 } = filters;
+  const { search, tags, tagMode = "all", location, country, range, dateFrom, dateTo, page = 1, pageSize = 50 } = filters;
 
   const where: any = {};
   const AND: any[] = [];
@@ -45,8 +46,16 @@ export async function getIncidents(filters: IncidentFilters = {}) {
   }
 
   if (tags && tags.length > 0) {
-    for (const tag of tags) {
-      AND.push({ incidentType: { contains: tag } });
+    if (tagMode === "any") {
+      // OR: incident must have at least one of the selected tags
+      AND.push({
+        OR: tags.map((tag) => ({ incidentType: { contains: tag } })),
+      });
+    } else {
+      // ALL: incident must have every selected tag (default)
+      for (const tag of tags) {
+        AND.push({ incidentType: { contains: tag } });
+      }
     }
   }
 

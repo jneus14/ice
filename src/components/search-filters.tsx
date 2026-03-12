@@ -14,6 +14,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
 
   const currentSearch = searchParams.get("q") || "";
   const currentTags = searchParams.getAll("tag");
+  const currentTagMode = (searchParams.get("tagMode") || "all") as "all" | "any";
   const currentCountry = searchParams.get("country") || "";
   const currentLocation = searchParams.get("location") || "";
   const currentDateFrom = searchParams.get("from") || "";
@@ -53,7 +54,11 @@ export function SearchFilters({ countries }: { countries: string[] }) {
     const newTags = currentTags.includes(tag)
       ? currentTags.filter((t) => t !== tag)
       : [...currentTags, tag];
-    updateFilters({ tag: newTags.length > 0 ? newTags : null });
+    updateFilters({
+      tag: newTags.length > 0 ? newTags : null,
+      // Auto-clear tagMode when back to 0 or 1 tag — mode is only meaningful with 2+
+      ...(newTags.length <= 1 ? { tagMode: null } : {}),
+    });
   };
 
   return (
@@ -155,6 +160,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
             updateFilters({
               q: null,
               tag: null,
+              tagMode: null,
               country: null,
               location: null,
               from: null,
@@ -218,6 +224,42 @@ export function SearchFilters({ countries }: { countries: string[] }) {
           })}
         </div>
       </div>
+
+      {/* ALL / ANY toggle — only shown when 2+ tags are active */}
+      {currentTags.length >= 2 && (
+        <div className="flex items-center gap-2.5 py-1">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-warm-500">
+            Show incidents matching
+          </span>
+          <div className="flex rounded-md border border-warm-300 overflow-hidden text-xs shadow-sm">
+            <button
+              onClick={() => updateFilters({ tagMode: null })}
+              className={`px-3 py-1.5 font-medium transition-colors ${
+                currentTagMode === "all"
+                  ? "bg-warm-800 text-white"
+                  : "bg-white text-warm-600 hover:bg-warm-50"
+              }`}
+            >
+              ALL selected tags
+            </button>
+            <button
+              onClick={() => updateFilters({ tagMode: "any" })}
+              className={`px-3 py-1.5 font-medium border-l border-warm-300 transition-colors ${
+                currentTagMode === "any"
+                  ? "bg-warm-800 text-white"
+                  : "bg-white text-warm-600 hover:bg-warm-50"
+              }`}
+            >
+              ANY selected tag
+            </button>
+          </div>
+          <span className="text-[11px] text-warm-400">
+            {currentTagMode === "any"
+              ? `showing union of ${currentTags.length} tags`
+              : `showing intersection of ${currentTags.length} tags`}
+          </span>
+        </div>
+      )}
 
       {/* Country of Origin */}
       <div>
