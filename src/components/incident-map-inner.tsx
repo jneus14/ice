@@ -23,7 +23,8 @@ const dotIcon = L.divIcon({
 });
 
 // Custom cluster icon
-function createClusterIcon(cluster: L.MarkerCluster) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createClusterIcon(cluster: any) {
   const count = cluster.getChildCount();
   const size = count < 10 ? 32 : count < 100 ? 38 : 46;
   return L.divIcon({
