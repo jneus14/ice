@@ -45,11 +45,9 @@ export async function getIncidents(filters: IncidentFilters = {}) {
   }
 
   if (tags && tags.length > 0) {
-    AND.push({
-      OR: tags.map((tag) => ({
-        incidentType: { contains: tag },
-      })),
-    });
+    for (const tag of tags) {
+      AND.push({ incidentType: { contains: tag } });
+    }
   }
 
   if (location) {

@@ -39,6 +39,10 @@ export function IncidentMap({
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       />
+      <link
+        rel="stylesheet"
+        href="https://unpkg.com/react-leaflet-cluster@2.1.0/lib/index.css"
+      />
       <div className="rounded-lg overflow-hidden border border-warm-200 h-[420px] mb-2">
         <MapInner incidents={incidents} />
       </div>

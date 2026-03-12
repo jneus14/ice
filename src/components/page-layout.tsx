@@ -55,19 +55,17 @@ export function PageLayout({
         <SearchFilters countries={countries} />
       </Suspense>
 
-      {/* "Hide heat map" / "Show heat map" button right above the map */}
       {hasMap && (
         <div className="flex justify-end mb-2">
           <button
             onClick={() => setShowMap(!showMap)}
             className="text-xs text-warm-400 hover:text-warm-700 underline transition-colors"
           >
-            {showMap ? "Hide heat map" : "Show heat map"}
+            {showMap ? "Hide map" : "Show map"}
           </button>
         </div>
       )}
 
-      {/* Heat map */}
       {hasMap && <IncidentMap incidents={mapIncidents} showMap={showMap} />}
 
       {/* Incident list */}

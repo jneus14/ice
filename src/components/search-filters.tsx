@@ -150,24 +150,23 @@ export function SearchFilters({ countries }: { countries: string[] }) {
             className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500"
           />
         </div>
-        {hasFilters && (
-          <button
-            onClick={() =>
-              updateFilters({
-                q: null,
-                tag: null,
-                country: null,
-                location: null,
-                from: null,
-                to: null,
-                range: null,
-              })
-            }
-            className="text-sm text-warm-400 hover:text-warm-700 underline"
-          >
-            Clear all
-          </button>
-        )}
+        <button
+          onClick={() =>
+            updateFilters({
+              q: null,
+              tag: null,
+              country: null,
+              location: null,
+              from: null,
+              to: null,
+              range: null,
+            })
+          }
+          disabled={!hasFilters}
+          className="text-sm text-warm-400 hover:text-warm-700 underline disabled:opacity-30 disabled:cursor-default disabled:no-underline"
+        >
+          Clear filters
+        </button>
       </div>
 
       {/* Incident Type */}

@@ -1,6 +1,8 @@
 "use client";
 
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
+import L from "leaflet";
 
 type MapIncident = {
   id: number;
@@ -11,6 +13,33 @@ type MapIncident = {
   longitude: number | null;
   incidentType: string | null;
 };
+
+// Custom orange dot marker
+const dotIcon = L.divIcon({
+  className: "",
+  html: `<div style="width:10px;height:10px;border-radius:50%;background:#ea580c;border:2px solid #9a3412;opacity:0.9;"></div>`,
+  iconSize: [10, 10],
+  iconAnchor: [5, 5],
+});
+
+// Custom cluster icon
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createClusterIcon(cluster: any) {
+  const count = cluster.getChildCount();
+  const size = count < 10 ? 32 : count < 100 ? 38 : 46;
+  return L.divIcon({
+    html: `<div style="
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:#ea580c;color:#fff;font-weight:700;
+      font-size:${size < 38 ? 12 : 13}px;font-family:sans-serif;
+      display:flex;align-items:center;justify-content:center;
+      border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25);
+    ">${count}</div>`,
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
 
 export function MapInner({ incidents }: { incidents: MapIncident[] }) {
   return (
@@ -26,47 +55,32 @@ export function MapInner({ incidents }: { incidents: MapIncident[] }) {
         opacity={0.55}
       />
 
-      {/* Heat glow layer — large semi-transparent blobs that accumulate into hotspots */}
-      {incidents.map((inc) => (
-        <CircleMarker
-          key={`heat-${inc.id}`}
-          center={[inc.latitude!, inc.longitude!]}
-          radius={28}
-          pathOptions={{
-            color: "transparent",
-            fillColor: "#ea580c",
-            fillOpacity: 0.055,
-            weight: 0,
-          }}
-        />
-      ))}
-
-      {/* Precise dot layer — small clickable markers */}
-      {incidents.map((inc) => (
-        <CircleMarker
-          key={`dot-${inc.id}`}
-          center={[inc.latitude!, inc.longitude!]}
-          radius={5}
-          pathOptions={{
-            color: "#9a3412",
-            fillColor: "#ea580c",
-            fillOpacity: 0.8,
-            weight: 1.5,
-          }}
-        >
-          <Popup>
-            <div className="text-sm max-w-[260px]">
-              <p className="font-semibold mb-1 leading-snug">{inc.headline}</p>
-              {inc.location && (
-                <p className="text-xs text-gray-500">{inc.location}</p>
-              )}
-              {inc.date && (
-                <p className="text-xs text-gray-500">{inc.date}</p>
-              )}
-            </div>
-          </Popup>
-        </CircleMarker>
-      ))}
+      <MarkerClusterGroup
+        iconCreateFunction={createClusterIcon}
+        maxClusterRadius={50}
+        showCoverageOnHover={false}
+        chunkedLoading
+      >
+        {incidents.map((inc) => (
+          <Marker
+            key={inc.id}
+            position={[inc.latitude!, inc.longitude!]}
+            icon={dotIcon}
+          >
+            <Popup>
+              <div className="text-sm max-w-[260px]">
+                <p className="font-semibold mb-1 leading-snug">{inc.headline}</p>
+                {inc.location && (
+                  <p className="text-xs text-gray-500">{inc.location}</p>
+                )}
+                {inc.date && (
+                  <p className="text-xs text-gray-500">{inc.date}</p>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MarkerClusterGroup>
     </MapContainer>
   );
 }
