@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { SearchFilters } from "@/components/search-filters";
 import { IncidentMap } from "@/components/incident-map";
 import { IncidentList } from "@/components/incident-list";
+import { useLanguage } from "@/lib/i18n";
 
 type MapIncident = {
   id: number;
@@ -51,6 +52,7 @@ export function PageLayout({
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const { t } = useLanguage();
 
   const hasMap = mapIncidents.length > 0;
 
@@ -90,13 +92,13 @@ export function PageLayout({
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                 </svg>
-                Edit mode
+                {t.editMode}
               </span>
               <button
                 onClick={() => setEditMode(false)}
                 className="text-xs text-warm-400 hover:text-warm-700 underline transition-colors"
               >
-                Exit
+                {t.exit}
               </button>
             </div>
           )}
@@ -124,7 +126,7 @@ export function PageLayout({
                   : <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.159.69.159 1.006 0z" />
                 }
               </svg>
-              {showMap ? "Hide map" : "Show map"}
+              {showMap ? t.hideMap : t.showMap}
             </button>
           )}
         </div>
@@ -155,8 +157,8 @@ export function PageLayout({
           }}
         >
           <div className="bg-white rounded-xl shadow-2xl p-6 w-80 mx-4">
-            <h2 className="text-base font-semibold text-warm-900 mb-1">Enter password to edit</h2>
-            <p className="text-xs text-warm-400 mb-4">This enables inline editing on all incident cards.</p>
+            <h2 className="text-base font-semibold text-warm-900 mb-1">{t.enterPassword}</h2>
+            <p className="text-xs text-warm-400 mb-4">{t.editDescription}</p>
             <input
               ref={passwordRef}
               type="password"
@@ -173,7 +175,7 @@ export function PageLayout({
                   setPasswordError(false);
                 }
               }}
-              placeholder="Password"
+              placeholder={t.password}
               className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none transition-colors ${
                 passwordError
                   ? "border-red-400 focus:border-red-500 bg-red-50"
@@ -181,14 +183,14 @@ export function PageLayout({
               }`}
             />
             {passwordError && (
-              <p className="text-xs text-red-500 mt-1">Incorrect password.</p>
+              <p className="text-xs text-red-500 mt-1">{t.incorrectPassword}</p>
             )}
             <div className="flex gap-2 mt-4">
               <button
                 onClick={submitPassword}
                 className="flex-1 px-4 py-2 bg-warm-800 text-white text-sm rounded-lg hover:bg-warm-900 transition-colors font-medium"
               >
-                Unlock
+                {t.unlock}
               </button>
               <button
                 onClick={() => {
@@ -198,7 +200,7 @@ export function PageLayout({
                 }}
                 className="px-4 py-2 border border-warm-300 text-warm-600 text-sm rounded-lg hover:bg-warm-50 transition-colors"
               >
-                Cancel
+                {t.cancel}
               </button>
             </div>
           </div>

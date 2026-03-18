@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseAltSources } from "@/lib/sources";
 import { INCIDENT_TYPE_TAGS, PERSON_IMPACTED_TAGS } from "@/lib/constants";
+import { useLanguage } from "@/lib/i18n";
 
 type Incident = {
   id: number;
@@ -117,12 +118,19 @@ function serializeAltSources(urls: string[]): string | null {
 export function IncidentCard({
   incident,
   editMode = false,
+  translatedHeadline = null,
+  translateSummary = false,
 }: {
   incident: Incident;
   editMode?: boolean;
+  translatedHeadline?: string | null;
+  translateSummary?: boolean;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
+  const [translatedSummary, setTranslatedSummary] = useState<string | null>(null);
+  const [translatingSum, setTranslatingSum] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -156,6 +164,32 @@ export function IncidentCard({
   );
 
   const allSources = [...new Set([incident.url, ...parseAltSources(incident.altSources)])];
+
+  function handleExpand() {
+    const next = !expanded;
+    setExpanded(next);
+    // Lazily translate summary when expanding in Spanish mode
+    if (next && translateSummary && incident.summary && !translatedSummary && !translatingSum) {
+      const cacheKey = `summary:es:${incident.id}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) { setTranslatedSummary(cached); return; }
+      setTranslatingSum(true);
+      fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: incident.summary }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.text) {
+            setTranslatedSummary(d.text);
+            try { sessionStorage.setItem(cacheKey, d.text); } catch {}
+          }
+        })
+        .catch(() => {})
+        .finally(() => setTranslatingSum(false));
+    }
+  }
 
   // Best source to show prominently = first non-social URL
   const primarySource = allSources.find((s) => !isSocial(s)) ?? allSources[0];
@@ -411,14 +445,14 @@ export function IncidentCard({
   return (
     <article
       className="group border-b border-warm-200 py-5 cursor-pointer transition-colors hover:bg-warm-50/70 px-3 -mx-3"
-      onClick={() => !editMode && setExpanded(!expanded)}
+      onClick={() => !editMode && handleExpand()}
     >
       <div className="flex items-start gap-3">
         {/* Main content */}
         <div className="flex-1 min-w-0">
           {/* Headline */}
           <h3 className="font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors">
-            {incident.headline || "Untitled incident"}
+            {translatedHeadline ?? incident.headline ?? "Untitled incident"}
           </h3>
 
           {/* Source name — shown right after headline */}
@@ -459,7 +493,7 @@ export function IncidentCard({
                   key={`it:${tag}`}
                   className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200"
                 >
-                  {getTagLabel(tag)}
+                  {t.tags.incidentTypes[tag] ?? getTagLabel(tag)}
                 </span>
               ))}
               {personImpactedTags.map((tag) => (
@@ -467,7 +501,7 @@ export function IncidentCard({
                   key={`pi:${tag}`}
                   className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200"
                 >
-                  {getTagLabel(tag)}
+                  {t.tags.personImpacted[tag] ?? getTagLabel(tag)}
                 </span>
               ))}
               {otherTags.map((tag) => (
@@ -493,7 +527,11 @@ export function IncidentCard({
             <div className="mt-3 space-y-3">
               {incident.summary && (
                 <p className="text-sm text-warm-700 leading-relaxed">
-                  {incident.summary}
+                  {translatingSum ? (
+                    <span className="italic text-warm-400">Traduciendo…</span>
+                  ) : (
+                    translatedSummary ?? incident.summary
+                  )}
                 </p>
               )}
               <div className="flex flex-col gap-1">
