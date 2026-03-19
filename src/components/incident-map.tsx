@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 
 type MapIncident = {
   id: number;
+  url: string;
   headline: string | null;
   date: string | null;
   location: string | null;

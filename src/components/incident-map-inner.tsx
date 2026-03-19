@@ -6,6 +6,7 @@ import L from "leaflet";
 
 type MapIncident = {
   id: number;
+  url: string;
   headline: string | null;
   date: string | null;
   location: string | null;
@@ -69,7 +70,7 @@ export function MapInner({ incidents }: { incidents: MapIncident[] }) {
           >
             <Popup>
               <div className="text-sm max-w-[260px]">
-                <p className="font-semibold mb-1 leading-snug">{inc.headline}</p>
+                <a href={inc.url} target="_blank" rel="noopener noreferrer" className="font-semibold mb-1 leading-snug text-orange-600 hover:text-orange-800 hover:underline block">{inc.headline}</a>
                 {inc.location && (
                   <p className="text-xs text-gray-500">{inc.location}</p>
                 )}

@@ -9,6 +9,7 @@ import { useLanguage } from "@/lib/i18n";
 
 type MapIncident = {
   id: number;
+  url: string;
   headline: string | null;
   date: string | null;
   location: string | null;

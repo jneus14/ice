@@ -155,6 +155,7 @@ export async function getMapIncidents(filters: IncidentFilters = {}) {
     where,
     select: {
       id: true,
+      url: true,
       headline: true,
       date: true,
       location: true,
