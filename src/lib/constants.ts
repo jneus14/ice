@@ -6,19 +6,19 @@ export const INCIDENT_TYPE_TAGS = [
   { value: "3rd Country Deportation", label: "Third Country Deportation" },
   { value: "Detention Conditions", label: "Detention Conditions" },
   { value: "Detained", label: "Disappearance/Detention" },
-  { value: "Injury/Illness/Medical", label: "Injury/Illness/Medical" },
+  { value: "Injury/Illness/Medical", label: "Illness/Injury" },
   { value: "Officer Misconduct", label: "Officer Misconduct" },
   { value: "Officer Use Of Force", label: "Officer Use of Force" },
   { value: "Raid", label: "Raid" },
   { value: "State/Local Collusion", label: "State/Local Collusion" },
-  { value: "Vigilante", label: "Vigilante/Bounty Hunter Action" },
+  { value: "Vigilante", label: "Vigilante/Impersonator/Bounty Hunter" },
 ] as const;
 
 export const PERSON_IMPACTED_TAGS = [
   { value: "DACA", label: "DACA/Dreamer" },
   { value: "LGBTQ+", label: "LGBTQ+" },
   { value: "LPR", label: "LPR/Greencard Holder" },
-  { value: "Minor/Family", label: "Minor/Family" },
+  { value: "Minor/Family", label: "Minor" },
   { value: "Native American", label: "Native American" },
   { value: "Person with Disability", label: "Person with Disability" },
   { value: "Refugee/Asylum", label: "Refugee/Asylum Seeker" },

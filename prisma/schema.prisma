@@ -23,6 +23,7 @@ model Incident {
   summary      String?
   incidentType String?
   country      String?
+  imageUrl     String?
   status       String    @default("RAW")
   rawHtml      String?
   errorMessage String?

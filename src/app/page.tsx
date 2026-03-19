@@ -34,7 +34,16 @@ export default async function Home({
       }),
       getDistinctCountries(),
       getTotalWithHeadline(),
-      getMapIncidents(),
+      getMapIncidents({
+        search: params.q as string,
+        tags,
+        tagMode: params.tagMode === "any" ? "any" : "all",
+        location: params.location as string,
+        country: params.country as string,
+        dateFrom: params.from as string,
+        dateTo: params.to as string,
+        range: params.range as string,
+      }),
     ]);
 
   const totalPages = Math.ceil(total / pageSize);

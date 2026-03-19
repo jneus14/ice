@@ -63,6 +63,7 @@ export async function processIncidentPipeline(incidentId: number) {
         summary: incident.summary || extracted.summary,
         incidentType: incident.incidentType || extracted.incidentType,
         country: incident.country || extracted.country,
+        imageUrl: incident.imageUrl || metadata.image || null,
         status: "COMPLETE",
         errorMessage: null,
       },

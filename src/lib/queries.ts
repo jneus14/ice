@@ -29,10 +29,8 @@ function getDateCutoff(range: string): Date | null {
   }
 }
 
-export async function getIncidents(filters: IncidentFilters = {}) {
-  const { search, tags, tagMode = "all", location, country, range, dateFrom, dateTo, page = 1, pageSize = 50 } = filters;
-
-  const where: any = {};
+function buildFilterWhere(filters: IncidentFilters): any {
+  const { search, tags, tagMode = "all", location, country, range, dateFrom, dateTo } = filters;
   const AND: any[] = [];
 
   if (search) {
@@ -47,12 +45,10 @@ export async function getIncidents(filters: IncidentFilters = {}) {
 
   if (tags && tags.length > 0) {
     if (tagMode === "any") {
-      // OR: incident must have at least one of the selected tags
       AND.push({
         OR: tags.map((tag) => ({ incidentType: { contains: tag } })),
       });
     } else {
-      // ALL: incident must have every selected tag (default)
       for (const tag of tags) {
         AND.push({ incidentType: { contains: tag } });
       }
@@ -60,7 +56,35 @@ export async function getIncidents(filters: IncidentFilters = {}) {
   }
 
   if (location) {
-    AND.push({ location: { contains: location } });
+    // Map full state names to abbreviations for flexible matching
+    const stateMap: Record<string, string> = {
+      alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+      colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA",
+      hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA",
+      kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+      massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS",
+      missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV",
+      "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+      "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK",
+      oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC",
+      "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT",
+      virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI",
+      wyoming: "WY", "district of columbia": "DC",
+    };
+    const lower = location.toLowerCase().trim();
+    const abbrev = stateMap[lower];
+    if (abbrev) {
+      // Match either the full state name or abbreviation in location field
+      AND.push({
+        OR: [
+          { location: { contains: location, mode: "insensitive" } },
+          { location: { contains: `, ${abbrev}`, mode: "insensitive" } },
+          { location: { contains: `${abbrev},`, mode: "insensitive" } },
+        ],
+      });
+    } else {
+      AND.push({ location: { contains: location, mode: "insensitive" } });
+    }
   }
 
   if (country) {
@@ -81,10 +105,14 @@ export async function getIncidents(filters: IncidentFilters = {}) {
     AND.push({ parsedDate: { lte: new Date(dateTo + "T23:59:59Z") } });
   }
 
-  // Only show incidents that have a headline on the public site
   AND.push({ headline: { not: null } });
 
-  where.AND = AND;
+  return { AND };
+}
+
+export async function getIncidents(filters: IncidentFilters = {}) {
+  const { page = 1, pageSize = 50 } = filters;
+  const where = buildFilterWhere(filters);
 
   const [incidents, total] = await Promise.all([
     prisma.incident.findMany({
@@ -102,6 +130,7 @@ export async function getIncidents(filters: IncidentFilters = {}) {
         summary: true,
         incidentType: true,
         country: true,
+        imageUrl: true,
       },
     }),
     prisma.incident.count({ where }),
@@ -116,13 +145,14 @@ export async function getTotalWithHeadline(): Promise<number> {
   });
 }
 
-export async function getMapIncidents() {
+export async function getMapIncidents(filters: IncidentFilters = {}) {
+  const where = buildFilterWhere(filters);
+  // Also require coordinates for map display
+  where.AND.push({ latitude: { not: null } });
+  where.AND.push({ longitude: { not: null } });
+
   return prisma.incident.findMany({
-    where: {
-      headline: { not: null },
-      latitude: { not: null },
-      longitude: { not: null },
-    },
+    where,
     select: {
       id: true,
       headline: true,

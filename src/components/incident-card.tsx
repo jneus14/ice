@@ -16,6 +16,7 @@ type Incident = {
   summary: string | null;
   incidentType: string | null;
   country: string | null;
+  imageUrl: string | null;
 };
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -136,6 +137,7 @@ export function IncidentCard({
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
   // Edit form state — initialized from incident
   const altSourcesList = parseAltSources(incident.altSources);
@@ -455,72 +457,85 @@ export function IncidentCard({
             {translatedHeadline ?? incident.headline ?? "Untitled incident"}
           </h3>
 
-          {/* Source name — shown right after headline */}
-          <a
-            href={primarySource}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-block mt-0.5 text-[0.72rem] font-medium text-orange-500 hover:text-orange-700 hover:underline transition-colors"
-          >
-            {getSourceName(primarySource)}
-          </a>
+          {/* Source, metadata, summary row with optional thumbnail */}
+          <div className="mt-0.5 flex gap-3">
+            {incident.imageUrl && (
+              <div className="rounded-md overflow-hidden bg-warm-100 w-[4.5rem] self-stretch shrink-0 mt-0.5">
+                <img
+                  src={incident.imageUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              {/* Source name with +N badge */}
+              <div className="flex items-center gap-1.5">
+                <a
+                  href={primarySource}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-block text-[0.72rem] font-medium text-orange-500 hover:text-orange-700 hover:underline transition-colors"
+                >
+                  {getSourceName(primarySource)}
+                </a>
+                {allSources.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSourcesExpanded(!sourcesExpanded); }}
+                    className="px-1.5 py-0 text-[0.65rem] font-semibold rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 transition-colors leading-[1.4]"
+                  >
+                    +{allSources.length - 1}
+                  </button>
+                )}
+              </div>
+              {sourcesExpanded && allSources.length > 1 && (
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                  {allSources.filter((s) => s !== primarySource).map((src) => (
+                    <a
+                      key={src}
+                      href={src}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[0.72rem] font-medium text-orange-500 hover:text-orange-700 hover:underline transition-colors"
+                    >
+                      {getSourceName(src)}
+                    </a>
+                  ))}
+                </div>
+              )}
 
-          {/* Date · Location · Country */}
-          {hasMeta && (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[0.8rem] text-warm-400">
-              {incident.date && (
-                <span className="font-medium text-warm-500">{formatDate(incident.date)}</span>
+              {/* Date · Location · Country */}
+              {hasMeta && (
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8rem] text-warm-400">
+                  {incident.date && (
+                    <span className="font-medium text-warm-500">{formatDate(incident.date)}</span>
+                  )}
+                  {incident.date && incident.location && (
+                    <span aria-hidden className="text-warm-300">·</span>
+                  )}
+                  {incident.location && <span>{incident.location}</span>}
+                  {incident.country && (
+                    <>
+                      <span aria-hidden className="text-warm-300">·</span>
+                      <span>{incident.country}</span>
+                    </>
+                  )}
+                </div>
               )}
-              {incident.date && incident.location && (
-                <span aria-hidden className="text-warm-300">·</span>
-              )}
-              {incident.location && <span>{incident.location}</span>}
-              {incident.country && (
-                <>
-                  <span aria-hidden className="text-warm-300">·</span>
-                  <span>{incident.country}</span>
-                </>
+
+              {/* Summary preview (collapsed) */}
+              {!expanded && incident.summary && (
+                <p className="text-sm text-warm-500 mt-1 line-clamp-2 leading-relaxed">
+                  {incident.summary}
+                </p>
               )}
             </div>
-          )}
-
-          {/* Tags */}
-          {rawTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {incidentTypeTags.map((tag) => (
-                <span
-                  key={`it:${tag}`}
-                  className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200"
-                >
-                  {t.tags.incidentTypes[tag] ?? getTagLabel(tag)}
-                </span>
-              ))}
-              {personImpactedTags.map((tag) => (
-                <span
-                  key={`pi:${tag}`}
-                  className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200"
-                >
-                  {t.tags.personImpacted[tag] ?? getTagLabel(tag)}
-                </span>
-              ))}
-              {otherTags.map((tag) => (
-                <span
-                  key={`ot:${tag}`}
-                  className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-warm-100 text-warm-500 border border-warm-200"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Summary preview (collapsed) */}
-          {!expanded && incident.summary && (
-            <p className="text-sm text-warm-500 mt-2 line-clamp-2 leading-relaxed">
-              {incident.summary}
-            </p>
-          )}
+          </div>
 
           {/* Expanded content */}
           {expanded && (
@@ -534,21 +549,26 @@ export function IncidentCard({
                   )}
                 </p>
               )}
-              <div className="flex flex-col gap-1">
-                {allSources.map((src) => (
-                  <a
-                    key={src}
-                    href={src}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 text-sm text-warm-700 hover:text-orange-600 underline underline-offset-2 transition-colors"
-                  >
-                    {getSourceName(src)}
-                    <span aria-hidden>→</span>
-                  </a>
-                ))}
-              </div>
+              {rawTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {incidentTypeTags.map((tag) => (
+                    <span
+                      key={`it:${tag}`}
+                      className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200"
+                    >
+                      {t.tags.incidentTypes[tag] ?? getTagLabel(tag)}
+                    </span>
+                  ))}
+                  {personImpactedTags.map((tag) => (
+                    <span
+                      key={`pi:${tag}`}
+                      className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200"
+                    >
+                      {t.tags.personImpacted[tag] ?? getTagLabel(tag)}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

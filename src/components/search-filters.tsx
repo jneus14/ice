@@ -95,32 +95,6 @@ export function SearchFilters({ countries }: { countries: string[] }) {
         />
       </div>
 
-      {/* Quick date range buttons */}
-      <div className="flex flex-wrap items-center gap-2">
-        {[
-          { label: t.pastWeek, value: "week" },
-          { label: t.pastMonth, value: "month" },
-          { label: t.past3Months, value: "3months" },
-          { label: t.pastYear, value: "year" },
-        ].map(({ label, value }) => {
-          const active = currentRange === value;
-          return (
-            <button
-              key={value}
-              onClick={() =>
-                updateFilters({ range: active ? null : value, from: null, to: null })
-              }
-              className={`px-3 py-1 text-sm rounded-full border transition-colors ${
-                active
-                  ? "bg-warm-800 text-white border-warm-800"
-                  : "bg-white text-warm-600 border-warm-300 hover:border-warm-500"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
 
       {/* Location + custom date range row */}
       <div className="flex flex-wrap items-center gap-3">
@@ -171,7 +145,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
             })
           }
           disabled={!hasFilters}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-warm-600 bg-white border border-warm-300 rounded-md hover:bg-warm-50 hover:border-warm-400 hover:text-warm-800 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-default disabled:hover:bg-white disabled:hover:border-warm-300 disabled:hover:text-warm-600"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-500 border border-red-500 rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-default disabled:bg-warm-300 disabled:border-warm-300 disabled:text-warm-500"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
