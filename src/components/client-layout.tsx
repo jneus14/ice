@@ -35,7 +35,7 @@ function SiteHeader() {
       <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
       <div className="max-w-6xl mx-auto px-6 py-12 relative">
         <a href="/" className="block group">
-          <h1 className="text-5xl font-bold tracking-tight font-serif bg-gradient-to-r from-white via-orange-100 to-amber-200 bg-clip-text text-transparent drop-shadow-sm">
+          <h1 className="text-5xl font-bold tracking-tight font-serif bg-gradient-to-r from-white via-orange-100 to-amber-200 bg-clip-text text-transparent drop-shadow-sm py-1 leading-normal">
             {t.siteTitle}
           </h1>
           <p className="text-warm-300 mt-3 text-lg leading-relaxed max-w-3xl font-light tracking-wide">
