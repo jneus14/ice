@@ -249,7 +249,7 @@ export async function findAndMergeDuplicates(): Promise<{ merged: number; messag
     messages: [
       {
         role: "user",
-        content: `Review these ICE incident reports. Identify groups that clearly describe the SAME individual person across multiple articles. Only high-confidence matches. Return ONLY a JSON array of ID arrays, e.g. [[101,205],[88,120]]. If none, return [].
+        content: `Review these ICE incident reports. Identify groups that clearly describe the SAME story across multiple articles. Two articles are duplicates if they cover the SAME individual person OR the SAME specific event at the same location. Do NOT group articles that merely share a general topic. Only high-confidence matches. Return ONLY a JSON array of ID arrays, e.g. [[101,205],[88,120]]. If none, return [].
 
 ${list}`,
       },
@@ -325,12 +325,16 @@ export async function findDuplicateCandidates(): Promise<{
     messages: [
       {
         role: "user",
-        content: `Review these ICE incident reports. Identify groups that clearly describe the SAME individual person across multiple articles. Consider Latin American naming conventions where "Dylan Lopez Contreras" and "Dylan Contreras" could be the same person.
+        content: `Review these ICE incident reports. Identify groups that clearly describe the SAME story across multiple articles. Two articles are duplicates if they cover:
+1. The SAME individual person (consider Latin American naming conventions where "Dylan Lopez Contreras" and "Dylan Contreras" could be the same person), OR
+2. The SAME specific event/incident at the same location (e.g. two articles about a raid at the same facility, agents leaving the same base, the same protest at the same place)
+
+Do NOT group articles that merely share a general topic (e.g. two unrelated raids in the same city). Only group articles covering the exact same story.
 
 ${nameHints ? `Pre-identified possible name matches (verify these):\n${nameHints}\n\n` : ""}All incidents:
 ${list}
 
-Return ONLY a JSON array of objects: [{"ids": [101, 205], "reason": "Same person: Full Name"}]. If none found, return [].`,
+Return ONLY a JSON array of objects: [{"ids": [101, 205], "reason": "Same person: Full Name"} or {"ids": [101, 205], "reason": "Same event: Terminal Island departure"}]. If none found, return [].`,
       },
     ],
   });
@@ -391,7 +395,7 @@ export async function findCombineCandidates(id: number): Promise<{
 
   const incident = await prisma.incident.findUnique({
     where: { id },
-    select: { headline: true, summary: true },
+    select: { headline: true, summary: true, location: true },
   });
 
   if (!incident?.headline) return { candidates: [] };
@@ -401,10 +405,23 @@ export async function findCombineCandidates(id: number): Promise<{
   // Search existing approved incidents
   const existing = await prisma.incident.findMany({
     where: { status: "COMPLETE", approved: true, headline: { not: null }, id: { not: id } },
-    select: { id: true, headline: true, date: true },
+    select: { id: true, headline: true, date: true, location: true },
     orderBy: { parsedDate: "desc" },
     take: 500,
   });
+
+  // Extract significant keywords (4+ chars, excluding common stopwords)
+  const stopwords = new Set(["after", "with", "from", "that", "this", "their", "about", "been", "have", "were", "they", "will", "would", "could", "should", "during", "before", "while", "under", "between", "through", "against", "without", "within"]);
+  function getKeywords(text: string): Set<string> {
+    return new Set(
+      text.toLowerCase().split(/\s+/)
+        .map(w => w.replace(/[^a-z]/g, ""))
+        .filter(w => w.length > 3 && !stopwords.has(w))
+    );
+  }
+
+  const words1 = getKeywords(incident.headline);
+  const loc1 = incident.location?.toLowerCase().trim() ?? "";
 
   const scored: Array<{ id: number; headline: string; date: string | null; score: number }> = [];
 
@@ -421,16 +438,19 @@ export async function findCombineCandidates(id: number): Promise<{
       }
     }
 
-    // Also check headline keyword overlap for non-name matches
-    if (score < 0.5) {
-      const words1 = new Set(incident.headline!.toLowerCase().split(/\s+/).filter(w => w.length > 3));
-      const words2 = new Set(e.headline.toLowerCase().split(/\s+/).filter(w => w.length > 3));
-      const overlap = [...words1].filter(w => words2.has(w)).length;
-      const maxWords = Math.max(words1.size, words2.size);
-      if (maxWords > 0) {
-        const wordScore = overlap / maxWords;
-        score = Math.max(score, wordScore * 0.7); // Cap at 0.7 for keyword-only matches
-      }
+    // Headline keyword overlap
+    const words2 = getKeywords(e.headline);
+    const overlap = [...words1].filter(w => words2.has(w)).length;
+    const minWords = Math.min(words1.size, words2.size);
+    if (minWords > 0) {
+      // Use min instead of max so partial overlap in a shorter headline scores higher
+      const wordScore = overlap / minWords;
+      // Boost if location also matches
+      const loc2 = e.location?.toLowerCase().trim() ?? "";
+      const locMatch = loc1 && loc2 && (loc1.includes(loc2) || loc2.includes(loc1) || loc1 === loc2);
+      const locationBoost = locMatch ? 0.15 : 0;
+      const keywordScore = Math.min(wordScore * 0.8 + locationBoost, 0.95);
+      score = Math.max(score, keywordScore);
     }
 
     if (score >= 0.3) {
