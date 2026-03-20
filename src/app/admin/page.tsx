@@ -11,15 +11,16 @@ export default async function AdminPage() {
 
   const stats = {
     total: incidents.length,
+    pending: incidents.filter((i) => i.status === "COMPLETE" && !i.approved).length,
     raw: incidents.filter((i) => i.status === "RAW").length,
-    complete: incidents.filter((i) => i.status === "COMPLETE").length,
+    complete: incidents.filter((i) => i.status === "COMPLETE" && i.approved).length,
     failed: incidents.filter((i) => i.status === "FAILED").length,
   };
 
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         {Object.entries(stats).map(([label, count]) => (
           <div key={label} className="border border-warm-200 p-3 rounded-md">
             <div className="text-2xl font-bold">{count}</div>

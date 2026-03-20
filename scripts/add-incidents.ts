@@ -18,6 +18,14 @@ import { prisma } from "../src/lib/db";
 import { processIncidentPipeline } from "../src/lib/pipeline";
 
 const RAW_URLS = `
+https://www.rsc.ox.ac.uk/blog/deportation-from-the-us-the-risks-for-stateless-people
+https://www.boston.com/news/national-news/2025/10/26/man-fleeing-immigration-agents-is-fatally-struck-by-a-vehicle-on-a-virginia-highway/
+https://www.cbsnews.com/texas/news/dallas-police-ice/
+https://www.cbsnews.com/texas/news/miguel-angel-garcia-hernandez-victim-dallas-ice-shooting-death/
+https://www.npr.org/2026/01/25/nx-s1-5687361/minneapolis-shooting-latest-alex-pretti
+https://www.nbcnews.com/news/us-news/california-farmworker-dies-immigration-raid-rcna218467
+https://theintercept.com/2026/03/13/ice-protesters-terrorism-prairieland-antifa/
+https://en.mercopress.com/2026/03/09/u.s.-kept-deporting-migrants-to-venezuela-and-iran-despite-plans-for-military-action
 https://www.nytimes.com/2026/02/20/nyregion/immigration-scam-new-york.html
 https://www.sfchronicle.com/politics/article/cbp-san-diego-land-parcel-21361363.php
 https://www.daylightsandiego.org/before-escondido-meeting-about-ice-use-of-gun-range-documents-reveal-border-patrol-also-used-facility/

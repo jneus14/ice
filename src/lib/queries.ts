@@ -106,6 +106,7 @@ function buildFilterWhere(filters: IncidentFilters): any {
   }
 
   AND.push({ headline: { not: null } });
+  AND.push({ approved: true });
 
   return { AND };
 }
@@ -131,6 +132,7 @@ export async function getIncidents(filters: IncidentFilters = {}) {
         incidentType: true,
         country: true,
         imageUrl: true,
+        timeline: true,
       },
     }),
     prisma.incident.count({ where }),
@@ -141,7 +143,7 @@ export async function getIncidents(filters: IncidentFilters = {}) {
 
 export async function getTotalWithHeadline(): Promise<number> {
   return prisma.incident.count({
-    where: { headline: { not: null } },
+    where: { headline: { not: null }, approved: true },
   });
 }
 
@@ -168,7 +170,7 @@ export async function getMapIncidents(filters: IncidentFilters = {}) {
 
 export async function getDistinctCountries(): Promise<string[]> {
   const results = await prisma.incident.findMany({
-    where: { country: { not: null }, headline: { not: null } },
+    where: { country: { not: null }, headline: { not: null }, approved: true },
     select: { country: true },
   });
   const all = new Set<string>();

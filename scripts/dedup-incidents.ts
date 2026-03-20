@@ -189,6 +189,7 @@ async function main() {
     }
 
     for (const indices of duplicateGroups) {
+      if (!Array.isArray(indices)) continue;
       const dupes = indices.map((i: number) => group[i]).filter(Boolean);
       if (dupes.length < 2) continue;
 

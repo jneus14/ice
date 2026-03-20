@@ -6,8 +6,8 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { processIncidentPipeline } from "@/lib/pipeline";
 import { parseAltSources, serializeAltSources } from "@/lib/sources";
-import { synthesizeIncidents } from "@/lib/extractor";
-import { findNameGroups } from "@/lib/name-utils";
+import { synthesizeIncidents, serializeTimeline } from "@/lib/extractor";
+import { findNameGroups, extractPersonName, nameMatchScore } from "@/lib/name-utils";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -35,6 +35,7 @@ export async function createIncident(formData: FormData) {
       incidentType: (formData.get("incidentType") as string)?.trim() || null,
       country: (formData.get("country") as string)?.trim() || null,
       status: "RAW",
+      approved: true, // Admin-added incidents are auto-approved
     },
   });
 
@@ -77,7 +78,7 @@ export async function deleteIncident(id: number) {
   revalidatePath("/");
 }
 
-export async function mergeIncidents(ids: number[]) {
+export async function mergeIncidents(ids: number[], primaryId?: number) {
   await requireAdmin();
   if (ids.length < 2) throw new Error("Need at least 2 incidents to merge");
 
@@ -88,8 +89,11 @@ export async function mergeIncidents(ids: number[]) {
 
   if (incidents.length < 2) throw new Error("Could not find enough incidents");
 
-  const primary = incidents[0];
-  const others = incidents.slice(1);
+  // Use specified primary, or default to first (lowest ID)
+  const primary = primaryId
+    ? incidents.find((i) => i.id === primaryId) ?? incidents[0]
+    : incidents[0];
+  const others = incidents.filter((i) => i.id !== primary.id);
 
   // Collect all non-primary URLs (other primaries + all altSources)
   const extraUrls: string[] = [
@@ -97,12 +101,13 @@ export async function mergeIncidents(ids: number[]) {
     ...incidents.flatMap((i) => parseAltSources(i.altSources)),
   ].filter((url, idx, arr) => url !== primary.url && arr.indexOf(url) === idx);
 
-  // Synthesize headline + summary from all incidents
-  const { headline, summary } = await synthesizeIncidents(
+  // Synthesize headline + summary + timeline from all incidents
+  const { headline, summary, timeline } = await synthesizeIncidents(
     incidents.map((i) => ({
       url: i.url,
       headline: i.headline,
       summary: i.summary,
+      date: i.date,
     }))
   );
 
@@ -110,19 +115,40 @@ export async function mergeIncidents(ids: number[]) {
   const pick = <T>(fn: (i: typeof primary) => T | null): T | null =>
     incidents.reduce<T | null>((acc, inc) => (acc !== null ? acc : fn(inc)), null);
 
+  // If timeline has events, use the most recent event date as parsedDate
+  // so the incident sorts by its latest development in the feed
+  let latestParsedDate = pick((i) => i.parsedDate);
+  if (timeline.length > 0) {
+    const dates = timeline
+      .map((e) => {
+        const parts = e.date.split("/");
+        if (parts.length === 3) {
+          return new Date(`${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`);
+        }
+        return new Date(e.date);
+      })
+      .filter((d) => !isNaN(d.getTime()));
+    if (dates.length > 0) {
+      latestParsedDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+    }
+  }
+
   await prisma.incident.update({
     where: { id: primary.id },
     data: {
       altSources: extraUrls.length > 0 ? JSON.stringify(extraUrls) : null,
       headline,
       summary,
+      timeline: serializeTimeline(timeline),
       date: pick((i) => i.date),
+      parsedDate: latestParsedDate,
       location: pick((i) => i.location),
       latitude: pick((i) => i.latitude),
       longitude: pick((i) => i.longitude),
       country: pick((i) => i.country),
       incidentType: pick((i) => i.incidentType),
       status: "COMPLETE",
+      approved: true,
     },
   });
 
@@ -336,4 +362,89 @@ Return ONLY a JSON array of objects: [{"ids": [101, 205], "reason": "Same person
     groups,
     message: `Found ${groups.length} potential duplicate group${groups.length !== 1 ? "s" : ""}`,
   };
+}
+
+export async function approveIncident(id: number) {
+  await requireAdmin();
+  await prisma.incident.update({
+    where: { id },
+    data: { approved: true },
+  });
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+export async function approveMultiple(ids: number[]) {
+  await requireAdmin();
+  await prisma.incident.updateMany({
+    where: { id: { in: ids } },
+    data: { approved: true },
+  });
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+export async function findCombineCandidates(id: number): Promise<{
+  candidates: Array<{ id: number; headline: string; date: string | null; score: number }>;
+}> {
+  await requireAdmin();
+
+  const incident = await prisma.incident.findUnique({
+    where: { id },
+    select: { headline: true, summary: true },
+  });
+
+  if (!incident?.headline) return { candidates: [] };
+
+  const name = extractPersonName(incident.headline);
+
+  // Search existing approved incidents
+  const existing = await prisma.incident.findMany({
+    where: { status: "COMPLETE", approved: true, headline: { not: null }, id: { not: id } },
+    select: { id: true, headline: true, date: true },
+    orderBy: { parsedDate: "desc" },
+    take: 500,
+  });
+
+  const scored: Array<{ id: number; headline: string; date: string | null; score: number }> = [];
+
+  for (const e of existing) {
+    if (!e.headline) continue;
+
+    let score = 0;
+
+    // Name-based matching
+    if (name) {
+      const existingName = extractPersonName(e.headline);
+      if (existingName) {
+        score = nameMatchScore(name, existingName);
+      }
+    }
+
+    // Also check headline keyword overlap for non-name matches
+    if (score < 0.5) {
+      const words1 = new Set(incident.headline!.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+      const words2 = new Set(e.headline.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+      const overlap = [...words1].filter(w => words2.has(w)).length;
+      const maxWords = Math.max(words1.size, words2.size);
+      if (maxWords > 0) {
+        const wordScore = overlap / maxWords;
+        score = Math.max(score, wordScore * 0.7); // Cap at 0.7 for keyword-only matches
+      }
+    }
+
+    if (score >= 0.3) {
+      scored.push({ id: e.id, headline: e.headline, date: e.date, score });
+    }
+  }
+
+  // Sort by score descending, take top 10
+  scored.sort((a, b) => b.score - a.score);
+  return { candidates: scored.slice(0, 10) };
+}
+
+export async function combineIntoExisting(newId: number, existingId: number) {
+  await requireAdmin();
+  // Always merge with existingId as primary
+  return mergeIncidents([existingId, newId], existingId);
 }

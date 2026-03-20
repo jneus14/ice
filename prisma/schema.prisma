@@ -25,6 +25,8 @@ model Incident {
   country      String?
   imageUrl     String?
   status       String    @default("RAW")
+  approved     Boolean   @default(false)
+  timeline     String?
   rawHtml      String?
   errorMessage String?
   createdAt    DateTime  @default(now())

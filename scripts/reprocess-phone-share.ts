@@ -73,7 +73,7 @@ const SKIP_DOMAINS = [
 
 async function submitUrl(url: string, key: string): Promise<{ created: boolean; message: string }> {
   try {
-    const res = await fetch(`http://localhost:3000/api/submit?key=${encodeURIComponent(key)}&url=${encodeURIComponent(url)}`, {
+    const res = await fetch(`https://hiproject.org/api/submit?key=${encodeURIComponent(key)}&url=${encodeURIComponent(url)}`, {
       method: "GET",
     });
     const data = await res.json();

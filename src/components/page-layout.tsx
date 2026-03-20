@@ -29,6 +29,7 @@ type Incident = {
   incidentType: string | null;
   country: string | null;
   imageUrl: string | null;
+  timeline: string | null;
 };
 
 export function PageLayout({

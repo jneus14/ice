@@ -6,6 +6,12 @@ import { parseAltSources } from "@/lib/sources";
 import { INCIDENT_TYPE_TAGS, PERSON_IMPACTED_TAGS } from "@/lib/constants";
 import { useLanguage } from "@/lib/i18n";
 
+type TimelineEvent = {
+  date: string;
+  event: string;
+  source?: string;
+};
+
 type Incident = {
   id: number;
   url: string;
@@ -17,6 +23,7 @@ type Incident = {
   incidentType: string | null;
   country: string | null;
   imageUrl: string | null;
+  timeline: string | null;
 };
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -549,6 +556,51 @@ export function IncidentCard({
                   )}
                 </p>
               )}
+              {/* Timeline */}
+              {(() => {
+                let events: TimelineEvent[] = [];
+                if (incident.timeline) {
+                  try {
+                    const parsed = JSON.parse(incident.timeline);
+                    if (Array.isArray(parsed)) {
+                      events = parsed.filter(
+                        (e: any) => e && typeof e.date === "string" && typeof e.event === "string"
+                      );
+                    }
+                  } catch {}
+                }
+                if (events.length === 0) return null;
+                return (
+                  <div className="border-l-2 border-warm-200 pl-4 space-y-2.5 ml-1">
+                    {events.map((evt, i) => (
+                      <div key={i} className="relative">
+                        <div className="absolute -left-[1.35rem] top-1.5 w-2 h-2 rounded-full bg-warm-300" />
+                        <div className="text-sm">
+                          <span className="font-medium text-warm-500">
+                            {formatDate(evt.date) ?? evt.date}
+                          </span>
+                          <span className="text-warm-300 mx-1.5">—</span>
+                          <span className="text-warm-700">{evt.event}</span>
+                          {evt.source && (
+                            <>
+                              {" "}
+                              <a
+                                href={evt.source}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-orange-500 hover:text-orange-700 hover:underline text-xs font-medium"
+                              >
+                                [{getSourceName(evt.source)}]
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
               {rawTags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {incidentTypeTags.map((tag) => (
