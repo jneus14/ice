@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { processIncidentPipeline } from "@/lib/pipeline";
 import { parseAltSources, serializeAltSources } from "@/lib/sources";
 import { synthesizeIncidents } from "@/lib/extractor";
+import { findNameGroups } from "@/lib/name-utils";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -257,4 +258,82 @@ ${list}`,
   revalidatePath("/admin");
   revalidatePath("/");
   return { merged: mergedCount, message: `Merged ${mergedCount} duplicate group${mergedCount !== 1 ? "s" : ""}` };
+}
+
+export async function findDuplicateCandidates(): Promise<{
+  groups: Array<{ ids: number[]; headlines: string[]; reason: string }>;
+  message: string;
+}> {
+  await requireAdmin();
+
+  const incidents = await prisma.incident.findMany({
+    where: { status: "COMPLETE", headline: { not: null } },
+    select: { id: true, headline: true, date: true, location: true },
+    orderBy: { parsedDate: "desc" },
+    take: 500,
+  });
+
+  if (incidents.length < 2) {
+    return { groups: [], message: "Not enough incidents to check" };
+  }
+
+  // Step 1: Pre-identify name-based matches using Latin American name normalization
+  const nameGroups = findNameGroups(
+    incidents.filter((i) => i.headline) as Array<{ id: number; headline: string }>
+  );
+
+  // Build hints for Claude
+  const nameHints = Array.from(nameGroups.entries())
+    .map(([name, ids]) => `- "${name}" (IDs: ${ids.join(", ")})`)
+    .join("\n");
+
+  // Step 2: Send to Claude with name-match hints for confirmation + additional detection
+  const anthropic = new Anthropic();
+  const list = incidents
+    .map((i) => `[${i.id}] ${i.headline} — ${i.date ?? "?"}, ${i.location ?? "?"}`)
+    .join("\n");
+
+  const msg = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 2000,
+    messages: [
+      {
+        role: "user",
+        content: `Review these ICE incident reports. Identify groups that clearly describe the SAME individual person across multiple articles. Consider Latin American naming conventions where "Dylan Lopez Contreras" and "Dylan Contreras" could be the same person.
+
+${nameHints ? `Pre-identified possible name matches (verify these):\n${nameHints}\n\n` : ""}All incidents:
+${list}
+
+Return ONLY a JSON array of objects: [{"ids": [101, 205], "reason": "Same person: Full Name"}]. If none found, return [].`,
+      },
+    ],
+  });
+
+  const text = msg.content[0].type === "text" ? msg.content[0].text.trim() : "[]";
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) return { groups: [], message: "No duplicates found" };
+
+  let rawGroups: Array<{ ids: number[]; reason: string }> = [];
+  try {
+    rawGroups = JSON.parse(match[0]);
+  } catch {
+    return { groups: [], message: "No duplicates found" };
+  }
+
+  if (!rawGroups.length) return { groups: [], message: "No duplicates found" };
+
+  // Enrich with headlines
+  const incidentMap = new Map(incidents.map((i) => [i.id, i.headline ?? ""]));
+  const groups = rawGroups
+    .filter((g) => g.ids && g.ids.length >= 2)
+    .map((g) => ({
+      ids: g.ids,
+      headlines: g.ids.map((id) => incidentMap.get(id) ?? `ID ${id}`),
+      reason: g.reason || "Possible duplicate",
+    }));
+
+  return {
+    groups,
+    message: `Found ${groups.length} potential duplicate group${groups.length !== 1 ? "s" : ""}`,
+  };
 }

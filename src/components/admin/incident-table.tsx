@@ -6,6 +6,8 @@ import {
   updateIncidentData,
   deleteIncident,
   findAndMergeDuplicates,
+  findDuplicateCandidates,
+  mergeIncidents,
   bulkAddUrls,
 } from "@/app/admin/incidents/actions";
 import { processIncident, processAllIncomplete } from "@/app/admin/incidents/process-action";
@@ -73,10 +75,14 @@ function EditableRow({
   incident,
   onDelete,
   onProcessDone,
+  selected,
+  onToggle,
 }: {
   incident: Incident;
   onDelete: (id: number) => void;
   onProcessDone: () => void;
+  selected: boolean;
+  onToggle: (id: number) => void;
 }) {
   const [fields, setFields] = useState({
     sources: toSourcesField(incident.url, incident.altSources),
@@ -143,6 +149,16 @@ function EditableRow({
         dirty ? "bg-amber-50" : "hover:bg-warm-50"
       }`}
     >
+      {/* Select */}
+      <td className="px-2 py-1.5 text-center">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggle(incident.id)}
+          className="accent-indigo-600"
+        />
+      </td>
+
       {/* Status */}
       <td className="px-2 py-1.5 whitespace-nowrap">
         <span
@@ -271,6 +287,12 @@ function EditableRow({
   );
 }
 
+type DuplicateGroup = {
+  ids: number[];
+  headlines: string[];
+  reason: string;
+};
+
 export function IncidentTable({ incidents }: { incidents: Incident[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -283,6 +305,11 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
   const [dedupeMsg, setDedupeMsg] = useState<string | null>(null);
   const [scraping, setScraping] = useState(false);
   const [scrapeMsg, setScrapeMsg] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [merging, setMerging] = useState(false);
+  const [candidates, setCandidates] = useState<DuplicateGroup[] | null>(null);
+  const [findingDupes, setFindingDupes] = useState(false);
+  const [mergingGroupIdx, setMergingGroupIdx] = useState<number | null>(null);
 
   const filtered = incidents
     .filter((inc) => {
@@ -322,6 +349,95 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this incident?")) return;
     await deleteIncident(id);
+    router.refresh();
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const filteredIds = filtered.map((i) => i.id);
+    const allSelected = filteredIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredIds));
+    }
+  };
+
+  const handleMergeSelected = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length < 2) return;
+    if (
+      !confirm(
+        `Merge ${ids.length} incidents (IDs: ${ids.join(", ")})? The first incident will be kept and others will be deleted.`
+      )
+    )
+      return;
+    setMerging(true);
+    try {
+      await mergeIncidents(ids);
+      setSelectedIds(new Set());
+      router.refresh();
+    } catch (e: any) {
+      alert("Merge failed: " + e.message);
+    } finally {
+      setMerging(false);
+    }
+  };
+
+  const handleFindDuplicates = async () => {
+    setFindingDupes(true);
+    setDedupeMsg(null);
+    setCandidates(null);
+    try {
+      const result = await findDuplicateCandidates();
+      setCandidates(result.groups);
+      setDedupeMsg(result.message);
+    } catch (e: any) {
+      setDedupeMsg("Error: " + e.message);
+    } finally {
+      setFindingDupes(false);
+    }
+  };
+
+  const handleMergeGroup = async (idx: number) => {
+    const group = candidates?.[idx];
+    if (!group) return;
+    setMergingGroupIdx(idx);
+    try {
+      await mergeIncidents(group.ids);
+      setCandidates((prev) => prev?.filter((_, i) => i !== idx) ?? null);
+      router.refresh();
+    } catch (e: any) {
+      alert("Merge failed: " + e.message);
+    } finally {
+      setMergingGroupIdx(null);
+    }
+  };
+
+  const handleDismissGroup = (idx: number) => {
+    setCandidates((prev) => prev?.filter((_, i) => i !== idx) ?? null);
+  };
+
+  const handleMergeAllGroups = async () => {
+    if (!candidates?.length) return;
+    if (!confirm(`Merge all ${candidates.length} duplicate groups?`)) return;
+    for (let i = candidates.length - 1; i >= 0; i--) {
+      setMergingGroupIdx(i);
+      try {
+        await mergeIncidents(candidates[i].ids);
+      } catch (e) {
+        console.error("Failed to merge group", candidates[i].ids, e);
+      }
+    }
+    setCandidates(null);
+    setMergingGroupIdx(null);
     router.refresh();
   };
 
@@ -451,14 +567,95 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
         >
           {deduping ? "Finding…" : "Auto-deduplicate"}
         </button>
+        <button
+          onClick={handleFindDuplicates}
+          disabled={findingDupes}
+          className="px-3 py-1.5 bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 rounded-md"
+        >
+          {findingDupes ? "Scanning…" : "Find Duplicates"}
+        </button>
+        {selectedIds.size >= 2 && (
+          <button
+            onClick={handleMergeSelected}
+            disabled={merging}
+            className="px-3 py-1.5 bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 disabled:opacity-50 rounded-md"
+          >
+            {merging ? "Merging…" : `Merge Selected (${selectedIds.size})`}
+          </button>
+        )}
         {scrapeMsg && <span className="text-xs text-warm-500">{scrapeMsg}</span>}
         {dedupeMsg && <span className="text-xs text-warm-500">{dedupeMsg}</span>}
       </div>
+
+      {/* ── Duplicate preview panel ────────────────────────────── */}
+      {candidates && candidates.length > 0 && (
+        <div className="mb-4 p-4 border border-purple-200 bg-purple-50 rounded-md">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-purple-900">
+              Proposed Duplicate Groups ({candidates.length})
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={handleMergeAllGroups}
+                className="px-2 py-1 bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 rounded"
+              >
+                Merge All
+              </button>
+              <button
+                onClick={() => setCandidates(null)}
+                className="px-2 py-1 bg-warm-300 text-warm-700 text-xs font-medium hover:bg-warm-400 rounded"
+              >
+                Dismiss All
+              </button>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {candidates.map((group, idx) => (
+              <div
+                key={group.ids.join("-")}
+                className="p-3 bg-white border border-purple-100 rounded"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-purple-800 mb-1">
+                      {group.reason}
+                    </p>
+                    <ul className="space-y-0.5">
+                      {group.ids.map((id, i) => (
+                        <li key={id} className="text-xs text-warm-600 truncate">
+                          <span className="font-mono text-warm-400">[{id}]</span>{" "}
+                          {group.headlines[i]}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => handleMergeGroup(idx)}
+                      disabled={mergingGroupIdx === idx}
+                      className="px-2 py-1 bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 disabled:opacity-50 rounded"
+                    >
+                      {mergingGroupIdx === idx ? "…" : "Merge"}
+                    </button>
+                    <button
+                      onClick={() => handleDismissGroup(idx)}
+                      className="px-2 py-1 bg-warm-200 text-warm-600 text-xs font-medium hover:bg-warm-300 rounded"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Spreadsheet table ───────────────────────────────── */}
       <div className="overflow-x-auto border border-warm-200 rounded-md">
         <table className="w-full text-xs" style={{ minWidth: "1500px" }}>
           <colgroup>
+            <col style={{ width: "40px" }} />
             <col style={{ width: "90px" }} />
             <col style={{ width: "220px" }} />
             <col style={{ width: "240px" }} />
@@ -471,6 +668,17 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
           </colgroup>
           <thead>
             <tr className="bg-warm-100 border-b border-warm-200 text-left text-warm-600 font-semibold uppercase tracking-wide text-[10px]">
+              <th className="px-2 py-2 text-center">
+                <input
+                  type="checkbox"
+                  onChange={toggleSelectAll}
+                  checked={
+                    filtered.length > 0 &&
+                    filtered.every((i) => selectedIds.has(i.id))
+                  }
+                  className="accent-indigo-600"
+                />
+              </th>
               <th className="px-2 py-2">Status</th>
               <th className="px-2 py-2">Sources (comma-sep)</th>
               <th className="px-2 py-2">Headline</th>
@@ -489,6 +697,8 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
                 incident={inc}
                 onDelete={handleDelete}
                 onProcessDone={() => router.refresh()}
+                selected={selectedIds.has(inc.id)}
+                onToggle={toggleSelect}
               />
             ))}
           </tbody>
