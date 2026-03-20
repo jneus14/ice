@@ -27,13 +27,14 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
   "date": "The date of the incident in M/D/YYYY format if available, otherwise null",
   "location": "City, State abbreviation (e.g. 'Chicago, IL') if available, otherwise null",
   "summary": "A 2-4 sentence factual summary of what happened",
-  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante",
+  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante",
   "country": "Country of origin of the affected person if mentioned, otherwise null"
 }
 
 Rules:
 - The page metadata (og:title, og:description, etc.) is provided by the publisher and is generally reliable for headline and summary. Use it as a strong starting point.
 - Only use tags from the provided list. Use multiple comma-separated tags when applicable.
+- Use "Resistance" for vigils, protests, rallies, community organizing, sanctuary movements, activist stories, and cases where activists or advocates are targeted by ICE.
 - Use "Native American" ONLY for U.S. Native Americans (members of federally recognized tribes, e.g. Navajo, Oglala Sioux, Cherokee). Use "Indigenous (Non-U.S.)" for indigenous people from other countries (e.g. indigenous Mexicans, Guatemalan Mayans, etc.).
 - If you cannot determine a field, set it to null.
 - The summary should be strictly factual and neutral in tone. Describe only what happened — do not editorialize, assess significance, or use conclusory language.

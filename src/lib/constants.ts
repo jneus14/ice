@@ -10,6 +10,7 @@ export const INCIDENT_TYPE_TAGS = [
   { value: "Officer Misconduct", label: "Officer Misconduct" },
   { value: "Officer Use Of Force", label: "Officer Use of Force" },
   { value: "Raid", label: "Raid" },
+  { value: "Resistance", label: "Resistance" },
   { value: "State/Local Collusion", label: "State/Local Collusion" },
   { value: "Vigilante", label: "Vigilante/Impersonator/Bounty Hunter" },
 ] as const;
