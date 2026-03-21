@@ -238,6 +238,28 @@ export function IncidentCard({
     altSources: altSourcesList.join("\n"),
   });
 
+  // Compute latest timeline date for display
+  const latestTimelineDate = (() => {
+    if (!incident.timeline) return null;
+    try {
+      const events = JSON.parse(incident.timeline);
+      if (!Array.isArray(events) || events.length < 2) return null;
+      const parseD = (d: string) => {
+        const parts = d.split("/");
+        if (parts.length === 3) return new Date(`${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`);
+        return new Date(d);
+      };
+      const dates = events.map((e: any) => parseD(e.date)).filter((d: Date) => !isNaN(d.getTime()));
+      if (dates.length === 0) return null;
+      const latest = new Date(Math.max(...dates.map((d: Date) => d.getTime())));
+      // Only show if different from original date
+      const origFormatted = formatDate(incident.date);
+      const latestFormatted = formatDate(`${latest.getMonth() + 1}/${latest.getDate()}/${latest.getFullYear()}`);
+      if (origFormatted === latestFormatted) return null;
+      return latestFormatted;
+    } catch { return null; }
+  })();
+
   const rawTags = [...new Set(
     incident.incidentType
       ?.split(",")
@@ -599,7 +621,16 @@ export function IncidentCard({
               {hasMeta && (
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8rem] text-warm-400">
                   {incident.date && (
-                    <span className="font-medium text-warm-500">{formatDate(incident.date)}</span>
+                    <>
+                      {latestTimelineDate ? (
+                        <span className="font-medium text-warm-500">
+                          {formatDate(incident.date)}
+                          <span className="text-warm-400 font-normal"> · Updated {latestTimelineDate}</span>
+                        </span>
+                      ) : (
+                        <span className="font-medium text-warm-500">{formatDate(incident.date)}</span>
+                      )}
+                    </>
                   )}
                   {incident.date && incident.location && (
                     <span aria-hidden className="text-warm-300">·</span>
