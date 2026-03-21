@@ -650,6 +650,16 @@ export function IncidentCard({
                 }
                 if (events.length === 0) return null;
 
+                // Sort reverse chronological (most recent first)
+                events.sort((a, b) => {
+                  const parseD = (d: string) => {
+                    const parts = d.split("/");
+                    if (parts.length === 3) return new Date(`${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`);
+                    return new Date(d);
+                  };
+                  return parseD(b.date).getTime() - parseD(a.date).getTime();
+                });
+
                 // Collect sources attributed to timeline events
                 const attributedSources = new Set<string>();
                 events.forEach((evt) => {
