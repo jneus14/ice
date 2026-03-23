@@ -23,6 +23,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import Exa from "exa-js";
 import { prisma } from "./db";
 import { extractFromText } from "./extractor";
+import { archiveUrls } from "./archive";
 import { parseIncidentDate, geocodeLocation } from "./geocode";
 import { serializeAltSources } from "./sources";
 
@@ -32,6 +33,7 @@ type EmbedData = {
   caption: string;
   imageUrl: string | null;
   accountName: string | null;
+  postDate: string | null;
 };
 
 /**
@@ -80,7 +82,27 @@ async function scrapeInstagramEmbed(url: string): Promise<EmbedData | null> {
     const accountMatch = html.match(/instagram\.com\/([A-Za-z0-9_.]{2,30})\//);
     const accountName = accountMatch?.[1] ?? null;
 
-    return { caption, imageUrl, accountName };
+    // Extract post date from embed HTML
+    let postDate: string | null = null;
+    const datePatterns = [
+      /datetime="([^"]+)"/,
+      /"taken_at_timestamp"\s*:\s*(\d+)/,
+      /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/,
+    ];
+    for (const pat of datePatterns) {
+      const m = html.match(pat);
+      if (m?.[1]) {
+        const d = m[1].length <= 12
+          ? new Date(parseInt(m[1]) * 1000)
+          : new Date(m[1]);
+        if (!isNaN(d.getTime())) {
+          postDate = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+          break;
+        }
+      }
+    }
+
+    return { caption, imageUrl, accountName, postDate };
   } catch {
     return null;
   }
@@ -251,12 +273,10 @@ export async function processInstagramPipeline(incidentId: number): Promise<void
 
   try {
     const exaKey = process.env.EXA_API_KEY;
-    if (!exaKey) throw new Error("EXA_API_KEY is not configured");
-
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY is not configured");
 
-    const exa = new Exa(exaKey);
+    const exa = exaKey ? new Exa(exaKey) : null;
 
     // ── Step 1: Instagram embed → caption + thumbnail ──────────────────────
     console.log(`[instagram-pipeline] Scraping embed for #${incidentId}: ${incident.url}`);
@@ -300,9 +320,15 @@ export async function processInstagramPipeline(incidentId: number): Promise<void
 
     // ── Step 4: Exa — search for news articles by headline ─────────────────
     let articles: ExaResult[] = [];
-    if (searchQuery) {
-      console.log(`[instagram-pipeline] Searching Exa for: "${searchQuery}"`);
-      articles = await findNewsArticles(searchQuery, exa);
+    if (searchQuery && exa) {
+      try {
+        console.log(`[instagram-pipeline] Searching Exa for: "${searchQuery}"`);
+        articles = await findNewsArticles(searchQuery, exa);
+      } catch (exaErr: any) {
+        console.warn(`[instagram-pipeline] Exa search failed (non-fatal): ${exaErr.message?.substring(0, 80)}`);
+      }
+    } else if (!exa) {
+      console.warn(`[instagram-pipeline] Skipping Exa search — no API key configured`);
     }
 
     // ── Step 4b: Verify each article is actually about the same incident ───
@@ -383,14 +409,16 @@ export async function processInstagramPipeline(incidentId: number): Promise<void
       }
     }
 
-    const parsedDate = parseIncidentDate(incident.date ?? extracted.date);
+    // Use best available date: existing > extracted > embed post date
+    const finalDate = incident.date ?? extracted.date ?? embed?.postDate ?? null;
+    const parsedDate = parseIncidentDate(finalDate);
 
     // ── Step 8: Save ───────────────────────────────────────────────────────
     await prisma.incident.update({
       where: { id: incidentId },
       data: {
         headline: incident.headline ?? extracted.headline,
-        date: incident.date ?? extracted.date,
+        date: finalDate,
         parsedDate,
         location: finalLocation,
         latitude,
@@ -410,6 +438,11 @@ export async function processInstagramPipeline(incidentId: number): Promise<void
         `"${extracted.headline}" | ` +
         `${articles.length} news articles found, ${newNewsUrls.length} saved as alt sources.`
     );
+
+    // Fire-and-forget: archive news article URLs in the Wayback Machine
+    if (altSourceUrls.length > 0) {
+      archiveUrls(altSourceUrls).catch(() => {});
+    }
   } catch (error: any) {
     await prisma.incident.update({
       where: { id: incidentId },

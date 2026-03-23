@@ -388,8 +388,24 @@ export async function approveMultiple(ids: number[]) {
   revalidatePath("/");
 }
 
+/** Extract all person names from text. Finds capitalized multi-word sequences. */
+function extractAllPersonNames(text: string): string[] {
+  if (!text) return [];
+  const namePattern = /\b([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+(?:de\s+la\s+|de\s+|del\s+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,3})\b/g;
+  const names: string[] = [];
+  const stopNames = new Set(["United States", "Border Patrol", "White House", "Supreme Court", "Federal Court", "Immigration Judge", "Central Louisiana", "South Burlington", "Salt Lake", "San Antonio", "Los Angeles", "New York", "North Carolina", "South Carolina", "San Diego", "San Francisco", "El Salvador", "Costa Rica", "Puerto Rico", "Dominican Republic", "Federal Plaza", "District Court", "Customs Enforcement", "Homeland Security", "National Guard"]);
+  let match;
+  while ((match = namePattern.exec(text)) !== null) {
+    const name = match[1];
+    if (!stopNames.has(name) && name.length > 5) {
+      names.push(name);
+    }
+  }
+  return [...new Set(names)];
+}
+
 export async function findCombineCandidates(id: number): Promise<{
-  candidates: Array<{ id: number; headline: string; date: string | null; score: number }>;
+  candidates: Array<{ id: number; headline: string; date: string | null; location: string | null; score: number }>;
 }> {
   await requireAdmin();
 
@@ -400,61 +416,94 @@ export async function findCombineCandidates(id: number): Promise<{
 
   if (!incident?.headline) return { candidates: [] };
 
-  const name = extractPersonName(incident.headline);
+  // Extract names from BOTH headline and summary
+  const headlineName = extractPersonName(incident.headline);
+  const summaryNames = extractAllPersonNames(incident.summary ?? "");
+  const allSourceNames = [headlineName, ...summaryNames].filter(Boolean) as string[];
 
-  // Search existing approved incidents
+  // Search existing incidents — include summary for matching
   const existing = await prisma.incident.findMany({
-    where: { status: "COMPLETE", approved: true, headline: { not: null }, id: { not: id } },
-    select: { id: true, headline: true, date: true, location: true },
+    where: { status: "COMPLETE", headline: { not: null }, id: { not: id } },
+    select: { id: true, headline: true, summary: true, date: true, location: true },
     orderBy: { parsedDate: "desc" },
-    take: 500,
+    take: 1000,
   });
 
-  // Extract significant keywords (4+ chars, excluding common stopwords)
-  const stopwords = new Set(["after", "with", "from", "that", "this", "their", "about", "been", "have", "were", "they", "will", "would", "could", "should", "during", "before", "while", "under", "between", "through", "against", "without", "within"]);
+  const stopwords = new Set(["after", "with", "from", "that", "this", "their", "about", "been", "have", "were", "they", "will", "would", "could", "should", "during", "before", "while", "under", "between", "through", "against", "without", "within", "also", "than", "more", "said", "says", "according", "told", "over", "into", "being", "which", "when", "where", "some", "other", "year", "years", "people", "including", "since", "states", "united", "federal", "immigration", "detained", "detention", "agents", "enforcement"]);
   function getKeywords(text: string): Set<string> {
     return new Set(
       text.toLowerCase().split(/\s+/)
-        .map(w => w.replace(/[^a-z]/g, ""))
+        .map(w => w.replace(/[^a-záéíóúñü]/g, ""))
         .filter(w => w.length > 3 && !stopwords.has(w))
     );
   }
 
-  const words1 = getKeywords(incident.headline);
+  // Combine headline + summary keywords for richer matching
+  const words1 = getKeywords(incident.headline + " " + (incident.summary ?? ""));
   const loc1 = incident.location?.toLowerCase().trim() ?? "";
 
-  const scored: Array<{ id: number; headline: string; date: string | null; score: number }> = [];
+  const scored: Array<{ id: number; headline: string; date: string | null; location: string | null; score: number }> = [];
 
   for (const e of existing) {
     if (!e.headline) continue;
 
     let score = 0;
+    const existingSummary = e.summary ?? "";
+    const existingFullText = e.headline + " " + existingSummary;
 
-    // Name-based matching
-    if (name) {
-      const existingName = extractPersonName(e.headline);
-      if (existingName) {
-        score = nameMatchScore(name, existingName);
+    // Name-based matching: check all names from source against headline + summary of existing
+    const existingHeadlineName = extractPersonName(e.headline);
+    const existingSummaryNames = extractAllPersonNames(existingSummary);
+    const allExistingNames = [existingHeadlineName, ...existingSummaryNames].filter(Boolean) as string[];
+
+    // Find best name match across all name pairs
+    for (const srcName of allSourceNames) {
+      for (const existName of allExistingNames) {
+        const s = nameMatchScore(srcName, existName);
+        if (s > score) score = s;
       }
     }
 
-    // Headline keyword overlap
-    const words2 = getKeywords(e.headline);
-    const overlap = [...words1].filter(w => words2.has(w)).length;
-    const minWords = Math.min(words1.size, words2.size);
-    if (minWords > 0) {
-      // Use min instead of max so partial overlap in a shorter headline scores higher
-      const wordScore = overlap / minWords;
-      // Boost if location also matches
-      const loc2 = e.location?.toLowerCase().trim() ?? "";
-      const locMatch = loc1 && loc2 && (loc1.includes(loc2) || loc2.includes(loc1) || loc1 === loc2);
-      const locationBoost = locMatch ? 0.15 : 0;
-      const keywordScore = Math.min(wordScore * 0.8 + locationBoost, 0.95);
-      score = Math.max(score, keywordScore);
+    // Also check if any source name appears as substring in existing full text
+    if (score < 0.5) {
+      const existingLower = existingFullText.toLowerCase();
+      for (const srcName of allSourceNames) {
+        const nameLower = srcName.toLowerCase();
+        if (existingLower.includes(nameLower)) {
+          score = Math.max(score, 0.9);
+        } else {
+          // Check first name + any surname
+          const parts = nameLower.split(/\s+/);
+          if (parts.length >= 2) {
+            const firstName = parts[0];
+            const surnames = parts.slice(1);
+            const firstMatch = existingLower.includes(firstName);
+            const surnameMatch = surnames.some(s => s.length > 3 && existingLower.includes(s));
+            if (firstMatch && surnameMatch) {
+              score = Math.max(score, 0.75);
+            }
+          }
+        }
+      }
+    }
+
+    // Keyword overlap using full text (headline + summary)
+    if (score < 0.5) {
+      const words2 = getKeywords(existingFullText);
+      const overlap = [...words1].filter(w => words2.has(w)).length;
+      const minWords = Math.min(words1.size, words2.size);
+      if (minWords > 0) {
+        const wordScore = overlap / minWords;
+        const loc2 = e.location?.toLowerCase().trim() ?? "";
+        const locMatch = loc1 && loc2 && (loc1.includes(loc2) || loc2.includes(loc1) || loc1 === loc2);
+        const locationBoost = locMatch ? 0.15 : 0;
+        const keywordScore = Math.min(wordScore * 0.8 + locationBoost, 0.95);
+        score = Math.max(score, keywordScore);
+      }
     }
 
     if (score >= 0.3) {
-      scored.push({ id: e.id, headline: e.headline, date: e.date, score });
+      scored.push({ id: e.id, headline: e.headline, date: e.date, location: e.location ?? null, score });
     }
   }
 

@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import { scrapeUrl } from "./scraper";
 import { extractFromText } from "./extractor";
 import { parseIncidentDate, geocodeLocation } from "./geocode";
+import { archiveUrl } from "./archive";
 
 const SOCIAL_MEDIA_HOSTS = ["instagram.com", "tiktok.com", "facebook.com/reel"];
 
@@ -68,6 +69,9 @@ export async function processIncidentPipeline(incidentId: number) {
         errorMessage: null,
       },
     });
+
+    // Fire-and-forget: archive the URL in the Wayback Machine
+    archiveUrl(incident.url).catch(() => {});
   } catch (error: any) {
     await prisma.incident.update({
       where: { id: incidentId },

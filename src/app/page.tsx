@@ -3,6 +3,7 @@ import {
   getDistinctCountries,
   getTotalWithHeadline,
   getMapIncidents,
+  getPendingIncidents,
 } from "@/lib/queries";
 import { PageLayout } from "@/components/page-layout";
 
@@ -19,7 +20,7 @@ export default async function Home({
 
   const page = Number(params.page) || 1;
 
-  const [{ incidents, total, pageSize }, countries, totalAll, mapIncidents] =
+  const [{ incidents, total, pageSize }, countries, totalAll, mapIncidents, pendingIncidents] =
     await Promise.all([
       getIncidents({
         search: params.q as string,
@@ -44,6 +45,7 @@ export default async function Home({
         dateTo: params.to as string,
         range: params.range as string,
       }),
+      getPendingIncidents(),
     ]);
 
   const totalPages = Math.ceil(total / pageSize);
@@ -57,6 +59,7 @@ export default async function Home({
       totalAll={totalAll}
       page={page}
       totalPages={totalPages}
+      pendingIncidents={pendingIncidents}
     />
   );
 }

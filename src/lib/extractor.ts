@@ -1,8 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PageMetadata } from "./scraper";
 
-const SYNTHESIS_PROMPT = `You are a data synthesis assistant. Given multiple news articles or sources about the same immigration enforcement incident involving the same individual, synthesize a single unified headline, summary, and timeline of key events. Return ONLY valid JSON with no markdown formatting.
+const SYNTHESIS_PROMPT = `You are a data synthesis assistant. Given multiple news articles or sources about immigration enforcement incidents, first verify they are about the SAME specific incident (same person/people, same event), then synthesize. Return ONLY valid JSON with no markdown formatting.
 
+IMPORTANT: If the sources describe DIFFERENT people or DIFFERENT incidents, return:
+{
+  "mismatch": true,
+  "groups": [
+    {"sourceIndices": [0], "headline": "Short headline for first incident"},
+    {"sourceIndices": [1, 2], "headline": "Short headline for second incident"}
+  ]
+}
+
+If all sources ARE about the same incident, return:
 {
   "headline": "A short synthesized headline summarizing the full picture of the incident (max 15 words)",
   "summary": "A 3-5 sentence factual summary synthesizing all sources, mentioning key developments or updates if the situation evolved over time",
@@ -12,6 +22,7 @@ const SYNTHESIS_PROMPT = `You are a data synthesis assistant. Given multiple new
 }
 
 Rules:
+- FIRST check: do all sources describe the same specific person and event? If not, set "mismatch": true and group them.
 - The headline and summary must represent ALL sources, not just one.
 - If the situation changed over time (e.g. detained → released, or appealed), reflect that arc.
 - The timeline should list key events in chronological order with dates in M/D/YYYY format. Each date should appear ONLY ONCE — if multiple things happened on the same day, synthesize them into a single concise sentence. Each event should be a short factual statement (e.g. "Detained by ICE agents at courthouse", "Federal judge ordered release on bond", "Released from custody"). Include 2-8 events covering the major developments.
@@ -27,19 +38,25 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
   "date": "The date of the incident in M/D/YYYY format if available, otherwise null",
   "location": "City, State abbreviation (e.g. 'Chicago, IL') if available, otherwise null",
   "summary": "A 2-4 sentence factual summary of what happened",
-  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante",
+  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention",
   "country": "Country of origin of the affected person if mentioned, otherwise null"
 }
 
 Rules:
+- IMPORTANT: This tracker is ONLY for news stories about specific immigration enforcement incidents. If the article is legal advice, a know-your-rights guide, a general explainer, a data report without a specific incident, a resource page, or an academic paper, return ALL fields as null.
 - The page metadata (og:title, og:description, etc.) is provided by the publisher and is generally reliable for headline and summary. Use it as a strong starting point.
 - Only use tags from the provided list. Use multiple comma-separated tags when applicable.
-- Use "Resistance" for vigils, protests, rallies, community organizing, sanctuary movements, activist stories, and cases where activists or advocates are targeted by ICE.
-- Use "Native American" ONLY for U.S. Native Americans (members of federally recognized tribes, e.g. Navajo, Oglala Sioux, Cherokee). Use "Indigenous (Non-U.S.)" for indigenous people from other countries (e.g. indigenous Mexicans, Guatemalan Mayans, etc.).
-- Use "Vigilante" ONLY for non-government actors: civilians impersonating ICE agents, bounty hunters, or vigilantes targeting immigrants. Do NOT use for real ICE/CBP agents using deceptive tactics (false pretenses, unmarked vehicles, fake stories) — those are "Officer Misconduct".
+- TAG DEFINITIONS — apply tags precisely:
+  - "Raid": ONLY for enforcement operations where officers storm/sweep a location and detain multiple people (workplace raids, neighborhood sweeps, multi-person operations). Do NOT use for targeted arrests of a single individual or for stories about planned detention facilities.
+  - "Detained" / "Disappearance/Detention": ONLY when a specific person is actually detained, disappeared, or held in custody in the story. Do NOT use for stories that merely discuss detention policy, planned facilities, or protests about detention — unless someone is actually detained in the story.
+  - "Resistance": for vigils, protests, rallies, community organizing, sanctuary movements, activist stories, community opposition to ICE facilities/operations, and cases where activists or advocates are targeted by ICE.
+  - "Native American": ONLY for U.S. Native Americans (members of federally recognized tribes, e.g. Navajo, Oglala Sioux, Cherokee).
+  - "Indigenous (Non-U.S.)": for indigenous people from other countries (e.g. indigenous Mexicans, Guatemalan Mayans, etc.).
+  - "Vigilante": ONLY for non-government actors — civilians impersonating ICE agents, bounty hunters, or vigilantes targeting immigrants. Do NOT use for real ICE/CBP agents using deceptive tactics (false pretenses, unmarked vehicles, fake stories) — those are "Officer Misconduct".
 - If you cannot determine a field, set it to null.
 - The summary should be strictly factual and neutral in tone. Describe only what happened — do not editorialize, assess significance, or use conclusory language.
 - Do NOT use phrases like "became a symbol of," "drew national attention," "highlighted the human cost of," "raised questions about," or similar embellishments. Just state the facts.
+- LANGUAGE: Never use the word "illegal" to describe people or border crossings. Use "unauthorized entry" instead of "illegal entry/crossing." Use "undocumented" instead of "illegal immigrant/alien." The word "illegal" is fine when describing government actions (e.g. "illegally detained").
 - For the date, prefer the date the incident occurred over the article publication date. Use the publication date only as a fallback.
 - Return ONLY the JSON object, no other text.`;
 
@@ -142,6 +159,10 @@ export function serializeTimeline(events: TimelineEvent[]): string | null {
   return JSON.stringify(events);
 }
 
+export type SynthesisResult =
+  | { mismatch: false; headline: string; summary: string; timeline: TimelineEvent[] }
+  | { mismatch: true; groups: Array<{ sourceIndices: number[]; headline: string }> };
+
 export async function synthesizeIncidents(
   incidents: Array<{
     url: string;
@@ -150,6 +171,31 @@ export async function synthesizeIncidents(
     date?: string | null;
   }>
 ): Promise<{ headline: string; summary: string; timeline: TimelineEvent[] }> {
+  const result = await synthesizeIncidentsWithMismatchDetection(incidents);
+  if (result.mismatch) {
+    // Fallback: use only the first source group
+    throw new MismatchError("Sources describe different incidents", result.groups);
+  }
+  return { headline: result.headline, summary: result.summary, timeline: result.timeline };
+}
+
+export class MismatchError extends Error {
+  groups: Array<{ sourceIndices: number[]; headline: string }>;
+  constructor(message: string, groups: Array<{ sourceIndices: number[]; headline: string }>) {
+    super(message);
+    this.name = "MismatchError";
+    this.groups = groups;
+  }
+}
+
+export async function synthesizeIncidentsWithMismatchDetection(
+  incidents: Array<{
+    url: string;
+    headline: string | null;
+    summary: string | null;
+    date?: string | null;
+  }>
+): Promise<SynthesisResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
 
@@ -176,7 +222,7 @@ export async function synthesizeIncidents(
     messages: [
       {
         role: "user",
-        content: `Synthesize these sources about the same individual:\n\n${content}`,
+        content: `Verify these sources are about the same incident, then synthesize if they are:\n\n${content}`,
       },
     ],
   });
@@ -193,7 +239,15 @@ export async function synthesizeIncidents(
 
   const parsed = JSON.parse(jsonStr);
 
-  // Parse timeline events and attach source URLs where possible
+  // Check for mismatch
+  if (parsed.mismatch) {
+    return {
+      mismatch: true,
+      groups: parsed.groups ?? [],
+    };
+  }
+
+  // Parse timeline events
   const timeline: TimelineEvent[] = (parsed.timeline ?? [])
     .filter((e: any) => e?.date && e?.event)
     .map((e: any) => ({
@@ -203,6 +257,7 @@ export async function synthesizeIncidents(
     }));
 
   return {
+    mismatch: false,
     headline: parsed.headline || "Untitled incident",
     summary: parsed.summary || "",
     timeline,

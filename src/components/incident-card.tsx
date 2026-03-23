@@ -10,6 +10,7 @@ type TimelineEvent = {
   date: string;
   event: string;
   source?: string;
+  sources?: string[];
 };
 
 type Incident = {
@@ -24,6 +25,16 @@ type Incident = {
   country: string | null;
   imageUrl: string | null;
   timeline: string | null;
+  approved?: boolean;
+};
+
+type CombineCandidate = {
+  id: number;
+  headline: string;
+  date: string | null;
+  location: string | null;
+  score: number;
+  approved: boolean;
 };
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -165,7 +176,153 @@ export function IncidentCard({
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [combining, setCombining] = useState(false);
+  const [candidates, setCandidates] = useState<CombineCandidate[]>([]);
+  const [showCandidates, setShowCandidates] = useState(false);
+  const [combiningInto, setCombiningInto] = useState<number | null>(null);
+  const [searchingSources, setSearchingSources] = useState(false);
+  const [keywordSearch, setKeywordSearch] = useState("");
+  const [keywordSearching, setKeywordSearching] = useState(false);
+  const [inlineEditing, setInlineEditing] = useState<"headline" | "summary" | null>(null);
+  const [inlineValue, setInlineValue] = useState("");
+  const [inlineSaving, setInlineSaving] = useState(false);
+  const [relatedStories, setRelatedStories] = useState<Array<{ id: number; headline: string; date: string | null; location: string | null }> | null>(null);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+  const [relatedExpanded, setRelatedExpanded] = useState(false);
+
+  const isPending = editMode && incident.approved === false;
+
+  async function handleApprove() {
+    setApproving(true);
+    try {
+      const res = await fetch(`/api/incidents/${incident.id}/approve`, {
+        method: "POST",
+        headers: { "x-edit-password": "acab" },
+      });
+      if (res.ok) router.refresh();
+    } catch {}
+    setApproving(false);
+  }
+
+  async function handleFindCandidates() {
+    setCombining(true);
+    try {
+      const res = await fetch(`/api/incidents/${incident.id}/combine`, {
+        headers: { "x-edit-password": "acab" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCandidates(data.candidates ?? []);
+        setShowCandidates(true);
+      }
+    } catch {}
+    setCombining(false);
+  }
+
+  function startInlineEdit(field: "headline" | "summary") {
+    setInlineValue(field === "headline" ? (incident.headline ?? "") : (incident.summary ?? ""));
+    setInlineEditing(field);
+  }
+
+  async function saveInlineEdit() {
+    if (!inlineEditing || inlineSaving) return;
+    setInlineSaving(true);
+    try {
+      const body: Record<string, string> = {};
+      body[inlineEditing] = inlineValue;
+      const res = await fetch(`/api/incidents/${incident.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setInlineEditing(null);
+        router.refresh();
+      }
+    } catch {}
+    setInlineSaving(false);
+  }
+
+  async function removeTag(tag: string) {
+    const currentTags = (incident.incidentType ?? "").split(",").map(t => t.trim()).filter(Boolean);
+    const newTags = currentTags.filter(t => t !== tag);
+    try {
+      await fetch(`/api/incidents/${incident.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+        body: JSON.stringify({ incidentType: newTags.join(", ") }),
+      });
+      router.refresh();
+    } catch {}
+  }
+
+  async function handleKeywordSearch() {
+    if (!keywordSearch.trim()) return;
+    setKeywordSearching(true);
+    try {
+      const res = await fetch(`/api/incidents/${incident.id}/combine?keyword=${encodeURIComponent(keywordSearch.trim())}`, {
+        headers: { "x-edit-password": "acab" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCandidates(data.candidates ?? []);
+      }
+    } catch {}
+    setKeywordSearching(false);
+  }
+
+  async function handleSearchSources() {
+    setSearchingSources(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const res = await fetch(`/api/incidents/${incident.id}/search-sources`, {
+        method: "POST",
+        headers: { "x-edit-password": "acab" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.added > 0) {
+          setSuccessMsg(`Found ${data.added} new source${data.added === 1 ? "" : "s"}`);
+          router.refresh();
+        } else {
+          setError("No new sources found");
+        }
+      } else {
+        setError(data.error ?? "Search failed");
+      }
+    } catch {
+      setError("Network error");
+    }
+    setSearchingSources(false);
+  }
+
+  async function handleCombineInto(existingId: number) {
+    setCombiningInto(existingId);
+    try {
+      const res = await fetch(`/api/incidents/${incident.id}/combine`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+        body: JSON.stringify({ existingId }),
+      });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const data = await res.json();
+        if (data.mismatch) {
+          setError("Cannot merge: sources describe different incidents");
+        } else {
+          setError(data.error ?? "Merge failed");
+        }
+      }
+    } catch {
+      setError("Network error during merge");
+    }
+    setCombiningInto(null);
+  }
 
   // Edit form state — initialized from incident
   const altSourcesList = parseAltSources(incident.altSources);
@@ -198,6 +355,15 @@ export function IncidentCard({
   function handleExpand() {
     const next = !expanded;
     setExpanded(next);
+    // Lazily fetch related stories
+    if (next && relatedStories === null && !loadingRelated) {
+      setLoadingRelated(true);
+      fetch(`/api/incidents/${incident.id}/related`)
+        .then((r) => r.json())
+        .then((d) => setRelatedStories(d.related ?? []))
+        .catch(() => setRelatedStories([]))
+        .finally(() => setLoadingRelated(false));
+    }
     // Lazily translate summary when expanding in Spanish mode
     if (next && translateSummary && incident.summary && !translatedSummary && !translatingSum) {
       const cacheKey = `summary:es:${incident.id}`;
@@ -474,32 +640,49 @@ export function IncidentCard({
   // ---- NORMAL VIEW ----
   return (
     <article
-      className="group border-b border-warm-200 py-5 cursor-pointer transition-colors hover:bg-warm-50/70 px-3 -mx-3"
+      className={`group border-b border-warm-200 py-5 cursor-pointer transition-colors hover:bg-warm-50/70 px-3 -mx-3`}
       onClick={() => handleExpand()}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-stretch gap-3">
         {/* Main content */}
         <div className="flex-1 min-w-0">
           {/* Headline */}
-          <h3 className="font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors">
-            {translatedHeadline ?? incident.headline ?? "Untitled incident"}
-          </h3>
+          {editMode && inlineEditing === "headline" ? (
+            <div className="flex gap-1.5 items-start" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="text"
+                value={inlineValue}
+                onChange={(e) => setInlineValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveInlineEdit(); if (e.key === "Escape") setInlineEditing(null); }}
+                autoFocus
+                className="flex-1 font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 border border-blue-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-500"
+              />
+              <button onClick={saveInlineEdit} disabled={inlineSaving} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+                {inlineSaving ? "…" : "Save"}
+              </button>
+              <button onClick={() => setInlineEditing(null)} className="px-2 py-1 text-xs text-warm-400 hover:text-warm-700">✕</button>
+            </div>
+          ) : (
+            <h3
+              className={`font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors ${editMode ? "cursor-text hover:bg-blue-50/50 rounded px-0.5 -mx-0.5" : ""}`}
+              onDoubleClick={editMode ? (e) => { e.stopPropagation(); startInlineEdit("headline"); } : undefined}
+            >
+              {translatedHeadline ?? incident.headline ?? "Untitled incident"}
+              <svg
+                className={`w-3.5 h-3.5 inline-block ml-1.5 text-warm-300 group-hover:text-warm-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </h3>
+          )}
 
-          {/* Source, metadata, summary row with optional thumbnail */}
-          <div className="mt-0.5 flex gap-3">
-            {incident.imageUrl && (
-              <div className="rounded-md overflow-hidden bg-warm-100 w-[4.5rem] self-stretch shrink-0 mt-0.5">
-                <img
-                  src={incident.imageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
-                />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
+          {/* Source, metadata, summary */}
+          <div className="mt-0.5">
+            <div>
               {/* Source name with +N badge */}
               <div className="flex items-center gap-1.5">
                 <a
@@ -558,7 +741,10 @@ export function IncidentCard({
 
               {/* Summary preview (collapsed) */}
               {!expanded && incident.summary && (
-                <p className="text-sm text-warm-500 mt-1 line-clamp-2 leading-relaxed">
+                <p
+                  className={`text-sm text-warm-500 mt-1 line-clamp-2 leading-relaxed ${editMode ? "cursor-text hover:bg-blue-50/50 rounded px-0.5 -mx-0.5" : ""}`}
+                  onDoubleClick={editMode ? (e) => { e.stopPropagation(); setExpanded(true); startInlineEdit("summary"); } : undefined}
+                >
                   {incident.summary}
                 </p>
               )}
@@ -569,13 +755,35 @@ export function IncidentCard({
           {expanded && (
             <div className="mt-3 space-y-3">
               {incident.summary && (
-                <p className="text-sm text-warm-700 leading-relaxed">
-                  {translatingSum ? (
-                    <span className="italic text-warm-400">Traduciendo…</span>
-                  ) : (
-                    translatedSummary ?? incident.summary
-                  )}
-                </p>
+                editMode && inlineEditing === "summary" ? (
+                  <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <textarea
+                      value={inlineValue}
+                      onChange={(e) => setInlineValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Escape") setInlineEditing(null); }}
+                      autoFocus
+                      rows={4}
+                      className="w-full text-sm text-warm-700 leading-relaxed border border-blue-300 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 resize-y"
+                    />
+                    <div className="flex gap-1.5">
+                      <button onClick={saveInlineEdit} disabled={inlineSaving} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+                        {inlineSaving ? "…" : "Save"}
+                      </button>
+                      <button onClick={() => setInlineEditing(null)} className="px-2 py-1 text-xs text-warm-400 hover:text-warm-700">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p
+                    className={`text-sm text-warm-700 leading-relaxed ${editMode ? "cursor-text hover:bg-blue-50/50 rounded px-0.5 -mx-0.5" : ""}`}
+                    onDoubleClick={editMode ? (e) => { e.stopPropagation(); startInlineEdit("summary"); } : undefined}
+                  >
+                    {translatingSum ? (
+                      <span className="italic text-warm-400">Traduciendo…</span>
+                    ) : (
+                      translatedSummary ?? incident.summary
+                    )}
+                  </p>
+                )
               )}
               {/* Timeline */}
               {(() => {
@@ -591,49 +799,80 @@ export function IncidentCard({
                   } catch {}
                 }
                 if (events.length === 0) return null;
+
+                // Sort reverse chronological (most recent first)
+                events.sort((a, b) => {
+                  const parseD = (d: string) => {
+                    const parts = d.split("/");
+                    if (parts.length === 3) return new Date(`${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`);
+                    return new Date(d);
+                  };
+                  return parseD(b.date).getTime() - parseD(a.date).getTime();
+                });
+
+                // Collect sources attributed to timeline events
+                const attributedSources = new Set<string>();
+                events.forEach((evt) => {
+                  if (evt.sources) evt.sources.forEach((s) => attributedSources.add(s));
+                  if (evt.source) attributedSources.add(evt.source);
+                });
+                // Sources not attributed to any event
+                const unattributed = allSources.filter((s) => !attributedSources.has(s));
+
                 return (
-                  <div className="border-l-2 border-warm-200 pl-4 space-y-2.5 ml-1">
+                  <div className="border-l-2 border-warm-200 pl-4 space-y-3 ml-1">
                     {events.map((evt, i) => {
                       const displayDate = formatDate(evt.date) ?? evt.date;
+                      const evtSources = evt.sources ?? (evt.source ? [evt.source] : []);
                       return (
                         <div key={i} className="relative">
-                          <div className="absolute -left-[1.35rem] top-1.5 w-2 h-2 rounded-full bg-warm-300" />
-                          <div className="text-sm">
-                            <span className="font-medium text-warm-500">
-                              {displayDate}
-                            </span>
-                            {evt.source && (
-                              <a
-                                href={evt.source}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="ml-1 text-orange-500 hover:text-orange-700 hover:underline text-xs font-medium"
-                              >
-                                [{getSourceName(evt.source)}]
-                              </a>
+                          <div className="absolute -left-[1.35rem] top-1.5 w-2 h-2 rounded-full bg-warm-400" />
+                          <div>
+                            <div className="text-sm">
+                              <span className="font-semibold text-warm-600">
+                                {displayDate}
+                              </span>
+                              <span className="text-warm-300 mx-1.5">—</span>
+                              <span className="text-warm-700">{evt.event}</span>
+                            </div>
+                            {evtSources.length > 0 && (
+                              <div className="flex flex-wrap gap-x-1.5 gap-y-0.5 mt-0.5">
+                                {evtSources.map((src) => (
+                                  <a
+                                    key={src}
+                                    href={src}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-[0.65rem] text-orange-500/80 hover:text-orange-700 hover:underline font-medium"
+                                  >
+                                    {getSourceName(src)}
+                                  </a>
+                                ))}
+                              </div>
                             )}
-                            <span className="text-warm-300 mx-1.5">—</span>
-                            <span className="text-warm-700">{evt.event}</span>
                           </div>
                         </div>
                       );
                     })}
-                    {/* Source links */}
-                    {allSources.length > 0 && (
-                      <div className="flex flex-wrap gap-x-2 gap-y-0.5 pt-1">
-                        {allSources.map((src) => (
-                          <a
-                            key={src}
-                            href={src}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-[0.7rem] text-orange-500 hover:text-orange-700 hover:underline font-medium"
-                          >
-                            {getSourceName(src)}
-                          </a>
-                        ))}
+                    {/* Unattributed sources */}
+                    {unattributed.length > 0 && (
+                      <div className="pt-0.5">
+                        <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
+                          <span className="text-[0.65rem] text-warm-400 font-medium">Also covered by:</span>
+                          {unattributed.map((src) => (
+                            <a
+                              key={src}
+                              href={src}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[0.65rem] text-orange-500/80 hover:text-orange-700 hover:underline font-medium"
+                            >
+                              {getSourceName(src)}
+                            </a>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -644,29 +883,95 @@ export function IncidentCard({
                   {incidentTypeTags.map((tag) => (
                     <span
                       key={`it:${tag}`}
-                      className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200"
+                      className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200 inline-flex items-center gap-1"
                     >
                       {t.tags.incidentTypes[tag] ?? getTagLabel(tag)}
+                      {editMode && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeTag(tag); }}
+                          className="text-blue-400 hover:text-red-500 ml-0.5 leading-none"
+                        >✕</button>
+                      )}
                     </span>
                   ))}
                   {personImpactedTags.map((tag) => (
                     <span
                       key={`pi:${tag}`}
-                      className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200"
+                      className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200 inline-flex items-center gap-1"
                     >
                       {t.tags.personImpacted[tag] ?? getTagLabel(tag)}
+                      {editMode && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeTag(tag); }}
+                          className="text-purple-400 hover:text-red-500 ml-0.5 leading-none"
+                        >✕</button>
+                      )}
                     </span>
                   ))}
                 </div>
+              )}
+              {/* Related stories */}
+              {relatedStories && relatedStories.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-warm-100">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setRelatedExpanded(!relatedExpanded); }}
+                    className="flex items-center gap-2 w-full text-left group/related"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-warm-400">Related stories</p>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warm-200 text-warm-500">
+                      {relatedStories.length}
+                    </span>
+                    <svg
+                      className={`w-3 h-3 text-warm-400 transition-transform duration-200 ${relatedExpanded ? "rotate-180" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {relatedExpanded && (
+                    <div className="space-y-1 mt-2">
+                      {relatedStories.map((rs) => (
+                        <a
+                          key={rs.id}
+                          href={`/?q=${encodeURIComponent(rs.headline?.split(" ").slice(0, 4).join(" ") ?? "")}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="block text-sm text-warm-600 hover:text-warm-900 hover:underline transition-colors"
+                        >
+                          {rs.headline}
+                          {rs.date && <span className="text-warm-400 text-xs ml-1.5">· {rs.date}</span>}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {loadingRelated && (
+                <p className="text-xs text-warm-400 italic mt-2">Loading related stories…</p>
               )}
             </div>
           )}
         </div>
 
-        {/* Edit mode buttons OR expand chevron */}
-        {editMode ? (
-          <div className="flex items-center gap-1.5 pt-1 shrink-0">
-            {/* Edit pencil */}
+        {/* Thumbnail — right side, hidden when expanded */}
+        {incident.imageUrl && !expanded && (
+          <div className="rounded-md overflow-hidden bg-warm-100 w-[5rem] shrink-0 self-stretch">
+            <img
+              src={incident.imageUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+            />
+          </div>
+        )}
+
+        {/* Right side: edit tools only */}
+        {editMode && (
+          <div className="flex items-center pt-1 shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); startEditing(); }}
               title="Edit incident"
@@ -677,21 +982,118 @@ export function IncidentCard({
               </svg>
             </button>
           </div>
-        ) : (
-          /* Expand chevron */
-          <div className="pt-1 text-warm-300 group-hover:text-warm-400 transition-colors shrink-0">
-            <svg
-              className={`w-4 h-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
         )}
       </div>
+      {/* Edit mode actions */}
+      {editMode && (error || successMsg) && (
+        <p className={`mt-2 ml-0 text-xs ${error ? "text-red-500" : "text-green-600"}`}>{error || successMsg}</p>
+      )}
+      {editMode && (
+        <div className="mt-2 flex items-center gap-2 ml-0">
+          {isPending && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleApprove(); }}
+              disabled={approving}
+              className="px-3 py-1 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60"
+            >
+              {approving ? "Approving…" : "✓ Approve"}
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleFindCandidates(); }}
+            disabled={combining}
+            className="px-3 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60"
+          >
+            {combining ? "Searching…" : "⊕ Add to existing"}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleSearchSources(); }}
+            disabled={searchingSources}
+            className="px-3 py-1 text-xs font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60"
+          >
+            {searchingSources ? "Searching…" : "🔍 Find sources"}
+          </button>
+          {!confirmDelete ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+              className="px-3 py-1 text-xs font-medium rounded-md border border-red-200 text-red-500 hover:bg-red-50 hover:border-red-400 transition-colors"
+            >
+              ✕ Delete
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 ml-1">
+              <span className="text-xs text-red-600 font-medium">Sure?</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                disabled={deleting}
+                className="px-2 py-1 bg-red-500 text-white text-xs rounded-md hover:bg-red-600 disabled:opacity-60"
+              >
+                {deleting ? "…" : "Yes"}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                className="px-2 py-1 text-warm-400 text-xs hover:text-warm-700"
+              >
+                No
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Combine candidates panel */}
+      {showCandidates && (
+        <div className="mt-2 border border-blue-200 rounded-lg bg-blue-50/50 p-3" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-blue-800">
+              {candidates.length > 0 ? `${candidates.length} matching incident${candidates.length === 1 ? "" : "s"} found` : "No matching incidents found"}
+            </span>
+            <button
+              onClick={() => setShowCandidates(false)}
+              className="text-xs text-blue-400 hover:text-blue-700"
+            >
+              ✕ Close
+            </button>
+          </div>
+          {/* Keyword search */}
+          <div className="flex gap-1.5 mb-2">
+            <input
+              type="text"
+              value={keywordSearch}
+              onChange={(e) => setKeywordSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleKeywordSearch(); }}
+              placeholder="Search by keyword..."
+              className="flex-1 px-2 py-1 text-xs rounded border border-blue-200 bg-white focus:outline-none focus:border-blue-400"
+            />
+            <button
+              onClick={handleKeywordSearch}
+              disabled={keywordSearching || !keywordSearch.trim()}
+              className="px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {keywordSearching ? "…" : "Search"}
+            </button>
+          </div>
+          {candidates.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 py-1.5 border-t border-blue-100">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-warm-800 truncate">{c.headline}</p>
+                <p className="text-xs text-warm-400">
+                  {c.date ?? "No date"} · {c.location ?? "No location"}
+                  {c.approved ? "" : " · (pending)"}
+                  <span className="text-blue-500 ml-1">score: {Math.round(c.score * 100)}%</span>
+                </p>
+              </div>
+              <button
+                onClick={() => handleCombineInto(c.id)}
+                disabled={combiningInto === c.id}
+                className="px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 shrink-0"
+              >
+                {combiningInto === c.id ? "Merging…" : "Merge into this"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
