@@ -70,25 +70,20 @@ export async function POST(req: NextRequest) {
       try {
         const incidents = await prisma.incident.findMany({
           where: {
-            url: { contains: "instagram.com" },
             headline: { not: null },
             approved: false,
             OR: [{ date: null }, { date: "" }],
-            NOT: [
-              { altSources: null },
-              { altSources: "" },
-              { altSources: "[]" },
-            ],
           },
           select: {
             id: true,
             headline: true,
+            url: true,
             altSources: true,
           },
           orderBy: { id: "desc" },
         });
 
-        send(`Found ${incidents.length} Instagram incidents missing dates (with alt sources)`);
+        send(`Found ${incidents.length} incidents missing dates`);
 
         let updated = 0;
         let noDate = 0;
@@ -97,24 +92,27 @@ export async function POST(req: NextRequest) {
           const inc = incidents[i];
           const label = `[${i + 1}/${incidents.length}] #${inc.id}`;
 
-          const altUrls = parseAltSources(inc.altSources).filter(
-            (u) =>
-              !u.includes("instagram.com") &&
-              !u.includes("twitter.com") &&
-              !u.includes("x.com") &&
-              !u.includes("facebook.com") &&
-              !u.includes("tiktok.com")
+          // Collect all fetchable URLs: primary URL + alt sources, skip social media
+          const SOCIAL = ["instagram.com", "twitter.com", "x.com", "facebook.com", "tiktok.com"];
+          const allUrls: string[] = [];
+          if (inc.url && !SOCIAL.some((d) => inc.url!.includes(d))) {
+            allUrls.push(inc.url);
+          }
+          allUrls.push(
+            ...parseAltSources(inc.altSources).filter(
+              (u) => !SOCIAL.some((d) => u.includes(d))
+            )
           );
 
-          if (altUrls.length === 0) {
+          if (allUrls.length === 0) {
             noDate++;
-            send(`${label}: no non-social alt sources`);
+            send(`${label}: no fetchable URLs`);
             continue;
           }
 
           let foundDate: string | null = null;
 
-          for (const url of altUrls.slice(0, 3)) {
+          for (const url of allUrls.slice(0, 3)) {
             send(`${label}: fetching ${url.slice(0, 80)}...`);
             foundDate = await fetchDateFromUrl(url);
             if (foundDate) break;
