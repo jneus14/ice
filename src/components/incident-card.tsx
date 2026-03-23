@@ -538,15 +538,13 @@ export function IncidentCard({
       <div className="flex items-start gap-3">
         {/* Main content */}
         <div className="flex-1 min-w-0">
-          {/* Headline */}
-          <h3 className="font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors">
-            {translatedHeadline ?? incident.headline ?? "Untitled incident"}
-          </h3>
-
-          {/* Source, metadata, summary row with optional thumbnail */}
-          <div className="mt-0.5 flex gap-3">
+          {/* Headline + thumbnail row */}
+          <div className="flex items-start gap-3">
+            <h3 className="flex-1 font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors">
+              {translatedHeadline ?? incident.headline ?? "Untitled incident"}
+            </h3>
             {incident.imageUrl && (
-              <div className="rounded-md overflow-hidden bg-warm-100 w-[4.5rem] self-stretch shrink-0 mt-0.5">
+              <div className="rounded-md overflow-hidden bg-warm-100 w-[4.5rem] h-[4.5rem] shrink-0">
                 <img
                   src={incident.imageUrl}
                   alt=""
@@ -557,7 +555,11 @@ export function IncidentCard({
                 />
               </div>
             )}
-            <div className="flex-1 min-w-0">
+          </div>
+
+          {/* Source, metadata, summary */}
+          <div className="mt-0.5">
+            <div>
               {/* Source name with +N badge */}
               <div className="flex items-center gap-1.5">
                 <a
