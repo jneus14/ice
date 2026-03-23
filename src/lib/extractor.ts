@@ -1,9 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PageMetadata } from "./scraper";
 
-const SYNTHESIS_PROMPT = `You are a data synthesis assistant. Given multiple news articles or sources about immigration enforcement incidents, first verify they are about the SAME specific incident (same person/people, same event), then synthesize. Return ONLY valid JSON with no markdown formatting.
+const SYNTHESIS_PROMPT = `You are a data synthesis assistant. Given multiple news articles or sources about immigration enforcement incidents, verify they are about the SAME event or topic, then synthesize. Return ONLY valid JSON with no markdown formatting.
 
-IMPORTANT: If the sources describe DIFFERENT people or DIFFERENT incidents, return:
+IMPORTANT: Only return mismatch if the sources are about COMPLETELY UNRELATED incidents (e.g. one is about a detention in Texas, the other about a raid in New York with no connection). Return mismatch:
 {
   "mismatch": true,
   "groups": [
@@ -12,7 +12,7 @@ IMPORTANT: If the sources describe DIFFERENT people or DIFFERENT incidents, retu
   ]
 }
 
-If all sources ARE about the same incident, return:
+If the sources cover the same event, policy, topic, or situation — even from different angles or mentioning different people affected by the same event — they match. Return:
 {
   "headline": "A short synthesized headline summarizing the full picture of the incident (max 15 words)",
   "summary": "A 3-5 sentence factual summary synthesizing all sources, mentioning key developments or updates if the situation evolved over time",
@@ -22,7 +22,8 @@ If all sources ARE about the same incident, return:
 }
 
 Rules:
-- FIRST check: do all sources describe the same specific person and event? If not, set "mismatch": true and group them.
+- Sources match if they cover the same event, policy change, enforcement action, or topic — even if they mention different affected individuals, quote different people, or emphasize different aspects. For example, multiple articles about "LAPD policy to verify ICE identities" are the same story even if they mention different specific people.
+- Only flag mismatch for truly unrelated incidents (different events in different places with no connection).
 - The headline and summary must represent ALL sources, not just one.
 - If the situation changed over time (e.g. detained → released, or appealed), reflect that arc.
 - The timeline should list key events in chronological order with dates in M/D/YYYY format. Each date should appear ONLY ONCE — if multiple things happened on the same day, synthesize them into a single concise sentence. Each event should be a short factual statement (e.g. "Detained by ICE agents at courthouse", "Federal judge ordered release on bond", "Released from custody"). Include 2-8 events covering the major developments.
