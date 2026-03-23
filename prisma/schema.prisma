@@ -31,4 +31,10 @@ model Incident {
   errorMessage String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([approved])
+  @@index([parsedDate(sort: Desc), createdAt(sort: Desc)])
+  @@index([status, approved, headline])
+  @@index([country])
 }

@@ -87,13 +87,15 @@ export async function GET(
     (incident.headline ?? "") + " " + (incident.summary ?? "")
   );
 
-  // Search existing incidents — include summary for matching
+  // Search existing incidents — include summary for matching (capped for performance)
   const existing = await prisma.incident.findMany({
     where: {
       id: { not: id },
       status: "COMPLETE",
       headline: { not: null },
     },
+    orderBy: { parsedDate: "desc" },
+    take: 500,
     select: {
       id: true,
       headline: true,
