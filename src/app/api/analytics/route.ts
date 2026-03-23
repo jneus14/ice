@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db";
 import { buildFilterWhere, parseFiltersFromParams } from "@/lib/queries";
 import { INCIDENT_TYPE_TAGS, PERSON_IMPACTED_TAGS } from "@/lib/constants";
 
-const INCIDENT_TYPE_VALUES = new Set(INCIDENT_TYPE_TAGS.map((t) => t.value));
-const PERSON_IMPACTED_VALUES = new Set(PERSON_IMPACTED_TAGS.map((t) => t.value));
+const INCIDENT_TYPE_VALUES = new Set<string>(INCIDENT_TYPE_TAGS.map((t) => t.value));
+const PERSON_IMPACTED_VALUES = new Set<string>(PERSON_IMPACTED_TAGS.map((t) => t.value));
 
 // All analytics start from Jan 2025
 const TIMELINE_START = new Date("2025-01-01T00:00:00Z");
