@@ -653,6 +653,15 @@ export function IncidentCard({
               onDoubleClick={editMode ? (e) => { e.stopPropagation(); startInlineEdit("headline"); } : undefined}
             >
               {translatedHeadline ?? incident.headline ?? "Untitled incident"}
+              <svg
+                className={`w-3.5 h-3.5 inline-block ml-1.5 text-warm-300 group-hover:text-warm-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
             </h3>
           )}
 
@@ -904,9 +913,9 @@ export function IncidentCard({
           </div>
         )}
 
-        {/* Right side: expand chevron + edit tools */}
-        <div className="flex items-center gap-1.5 pt-1 shrink-0">
-          {editMode && (
+        {/* Right side: edit tools only */}
+        {editMode && (
+          <div className="flex items-center pt-1 shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); startEditing(); }}
               title="Edit incident"
@@ -916,19 +925,8 @@ export function IncidentCard({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
               </svg>
             </button>
-          )}
-          <div className="text-warm-300 group-hover:text-warm-400 transition-colors">
-            <svg
-              className={`w-4 h-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
           </div>
-        </div>
+        )}
       </div>
       {/* Edit mode actions */}
       {editMode && (
