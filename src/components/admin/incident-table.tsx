@@ -14,7 +14,7 @@ import {
   findCombineCandidates,
   combineIntoExisting,
 } from "@/app/admin/incidents/actions";
-import { processIncident, processAllIncomplete } from "@/app/admin/incidents/process-action";
+import { processIncident, processAllIncomplete, processSelected } from "@/app/admin/incidents/process-action";
 import { parseAltSources, serializeAltSources } from "@/lib/sources";
 
 type Incident = {
@@ -449,6 +449,8 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
   const [findingDupes, setFindingDupes] = useState(false);
   const [mergingGroupIdx, setMergingGroupIdx] = useState<number | null>(null);
   const [bulkApproving, setBulkApproving] = useState(false);
+  const [scrapingSelected, setScrapingSelected] = useState(false);
+  const [scrapeSelectedMsg, setScrapeSelectedMsg] = useState<string | null>(null);
 
   const filtered = incidents
     .filter((inc) => {
@@ -638,6 +640,24 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
     }
   };
 
+  const handleScrapeSelected = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Scrape ${ids.length} selected entries? This may take a while and use API credits.`)) return;
+    setScrapingSelected(true);
+    setScrapeSelectedMsg(null);
+    try {
+      const msg = await processSelected(ids);
+      setScrapeSelectedMsg(msg);
+      setSelectedIds(new Set());
+      router.refresh();
+    } catch (e: any) {
+      setScrapeSelectedMsg("Error: " + e.message);
+    } finally {
+      setScrapingSelected(false);
+    }
+  };
+
   const handleScrapeAll = async () => {
     setScraping(true);
     setScrapeMsg(null);
@@ -718,8 +738,17 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
           disabled={scraping}
           className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 rounded-md"
         >
-          {scraping ? "Scraping…" : "Scrape All RAW"}
+          {scraping ? "Scraping…" : "Scrape All Unprocessed"}
         </button>
+        {selectedIds.size >= 1 && (
+          <button
+            onClick={handleScrapeSelected}
+            disabled={scrapingSelected}
+            className="px-3 py-1.5 bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 disabled:opacity-50 rounded-md"
+          >
+            {scrapingSelected ? "Scraping…" : `Scrape Selected (${selectedIds.size})`}
+          </button>
+        )}
         <button
           onClick={handleDeduplicate}
           disabled={deduping}
@@ -759,6 +788,7 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
           ) : null;
         })()}
         {scrapeMsg && <span className="text-xs text-warm-500">{scrapeMsg}</span>}
+        {scrapeSelectedMsg && <span className="text-xs text-warm-500">{scrapeSelectedMsg}</span>}
         {dedupeMsg && <span className="text-xs text-warm-500">{dedupeMsg}</span>}
       </div>
 

@@ -28,7 +28,7 @@ export function ScrapeAllButton({ incompleteCount }: { incompleteCount: number }
         disabled={isPending}
         className="px-4 py-2 border border-warm-300 text-sm font-medium hover:bg-warm-50 disabled:opacity-50 transition-colors"
       >
-        {isPending ? "Scraping..." : `Scrape All Incomplete (${incompleteCount})`}
+        {isPending ? "Scraping..." : `Scrape All Unprocessed (${incompleteCount})`}
       </button>
       {result && <span className="text-sm text-warm-500">{result}</span>}
     </div>
