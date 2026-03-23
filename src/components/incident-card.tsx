@@ -535,27 +535,13 @@ export function IncidentCard({
       className={`group border-b border-warm-200 py-5 cursor-pointer transition-colors hover:bg-warm-50/70 px-3 -mx-3 ${isPending ? "border-l-4 border-l-amber-400 bg-amber-50/30" : ""}`}
       onClick={() => handleExpand()}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-stretch gap-3">
         {/* Main content */}
         <div className="flex-1 min-w-0">
-          {/* Headline + thumbnail row */}
-          <div className="flex items-start gap-3">
-            <h3 className="flex-1 font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors">
-              {translatedHeadline ?? incident.headline ?? "Untitled incident"}
-            </h3>
-            {incident.imageUrl && (
-              <div className="rounded-md overflow-hidden bg-warm-100 w-[4.5rem] h-[4.5rem] shrink-0">
-                <img
-                  src={incident.imageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
-                />
-              </div>
-            )}
-          </div>
+          {/* Headline */}
+          <h3 className="font-serif text-[1.05rem] font-semibold leading-snug text-warm-900 group-hover:text-warm-700 transition-colors">
+            {translatedHeadline ?? incident.headline ?? "Untitled incident"}
+          </h3>
 
           {/* Source, metadata, summary */}
           <div className="mt-0.5">
@@ -753,6 +739,20 @@ export function IncidentCard({
             </div>
           )}
         </div>
+
+        {/* Thumbnail — right side, stretches full height */}
+        {incident.imageUrl && (
+          <div className="rounded-md overflow-hidden bg-warm-100 w-[5rem] shrink-0 self-stretch">
+            <img
+              src={incident.imageUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+            />
+          </div>
+        )}
 
         {/* Right side: expand chevron + edit tools */}
         <div className="flex items-center gap-1.5 pt-1 shrink-0">
