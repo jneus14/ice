@@ -56,6 +56,7 @@ Rules:
 - If you cannot determine a field, set it to null.
 - The summary should be strictly factual and neutral in tone. Describe only what happened — do not editorialize, assess significance, or use conclusory language.
 - Do NOT use phrases like "became a symbol of," "drew national attention," "highlighted the human cost of," "raised questions about," or similar embellishments. Just state the facts.
+- LANGUAGE: Never use the word "illegal" to describe people or border crossings. Use "unauthorized entry" instead of "illegal entry/crossing." Use "undocumented" instead of "illegal immigrant/alien." The word "illegal" is fine when describing government actions (e.g. "illegally detained").
 - For the date, prefer the date the incident occurred over the article publication date. Use the publication date only as a fallback.
 - Return ONLY the JSON object, no other text.`;
 
