@@ -12,8 +12,10 @@ import {
 
 export function TypeBreakdownChart({
   data,
+  color = "#3b82f6",
 }: {
   data: Array<{ type: string; count: number }>;
+  color?: string;
 }) {
   if (data.length === 0) {
     return <p className="text-warm-400 text-sm py-8 text-center">No data</p>;
@@ -44,7 +46,7 @@ export function TypeBreakdownChart({
             border: "1px solid #d6d3d1",
           }}
         />
-        <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Incidents" />
+        <Bar dataKey="count" fill={color} radius={[0, 4, 4, 0]} name="Incidents" />
       </BarChart>
     </ResponsiveContainer>
   );

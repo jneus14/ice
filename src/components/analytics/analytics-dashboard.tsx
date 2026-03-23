@@ -11,7 +11,8 @@ import { InsightCards } from "./insight-cards";
 type AnalyticsData = {
   total: number;
   timeSeries: Array<{ period: string; count: number }>;
-  byType: Array<{ type: string; count: number }>;
+  byIncidentType: Array<{ type: string; count: number }>;
+  byPersonImpacted: Array<{ type: string; count: number }>;
   byState: Array<{ state: string; count: number }>;
   byCountry: Array<{ country: string; count: number }>;
 };
@@ -103,20 +104,28 @@ function Dashboard() {
             <TimeSeriesChart data={data.timeSeries} granularity={granularity} />
           </div>
 
-          {/* Two column: Type + State */}
+          {/* Two column: Incident Type + Person Impacted */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white border border-warm-200 rounded-lg p-4 sm:p-6">
               <h2 className="text-lg font-semibold text-warm-900 mb-4">
                 By Incident Type
               </h2>
-              <TypeBreakdownChart data={data.byType} />
+              <TypeBreakdownChart data={data.byIncidentType} />
             </div>
             <div className="bg-white border border-warm-200 rounded-lg p-4 sm:p-6">
               <h2 className="text-lg font-semibold text-warm-900 mb-4">
-                By State
+                By Person Impacted
               </h2>
-              <StateChart data={data.byState.slice(0, 15)} />
+              <TypeBreakdownChart data={data.byPersonImpacted} color="#a855f7" />
             </div>
+          </div>
+
+          {/* State */}
+          <div className="bg-white border border-warm-200 rounded-lg p-4 sm:p-6">
+            <h2 className="text-lg font-semibold text-warm-900 mb-4">
+              By State
+            </h2>
+            <StateChart data={data.byState.slice(0, 15)} />
           </div>
 
           {/* Country */}
