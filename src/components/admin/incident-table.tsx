@@ -114,6 +114,7 @@ function EditableRow({
   const [combining, setCombining] = useState(false);
   const [combineCandidates, setCombineCandidates] = useState<CombineCandidate[] | null>(null);
   const [combiningInto, setCombiningInto] = useState<number | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
 
   const update = (field: keyof typeof fields, value: string) => {
     setFields((prev) => ({ ...prev, [field]: value }));
@@ -187,6 +188,31 @@ function EditableRow({
       alert("Search failed: " + e.message);
     } finally {
       setCombining(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    try {
+      const res = await fetch(`/api/incidents/${incident.id}/regenerate-summary`, {
+        method: "POST",
+        headers: { "x-edit-password": "acab" },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to regenerate");
+      }
+      const data = await res.json();
+      setFields((prev) => ({
+        ...prev,
+        summary: data.summary || prev.summary,
+        headline: data.headline || prev.headline,
+      }));
+      onProcessDone();
+    } catch (e: any) {
+      alert("Regenerate failed: " + e.message);
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -318,12 +344,22 @@ function EditableRow({
 
       {/* Summary */}
       <td className="py-1">
-        <Cell
-          value={fields.summary}
-          onChange={(v) => update("summary", v)}
-          onBlur={save}
-          placeholder="Summary"
-        />
+        <div className="flex items-center gap-1">
+          <Cell
+            value={fields.summary}
+            onChange={(v) => update("summary", v)}
+            onBlur={save}
+            placeholder="Summary"
+          />
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="shrink-0 text-orange-500 hover:text-orange-700 text-xs underline disabled:opacity-50"
+            title="Regenerate summary from all linked sources"
+          >
+            {regenerating ? "…" : "Regen"}
+          </button>
+        </div>
       </td>
 
       {/* Actions */}
