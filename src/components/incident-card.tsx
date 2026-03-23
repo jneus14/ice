@@ -932,8 +932,8 @@ export function IncidentCard({
           )}
         </div>
 
-        {/* Thumbnail — right side, stretches full height */}
-        {incident.imageUrl && (
+        {/* Thumbnail — right side, hidden when expanded */}
+        {incident.imageUrl && !expanded && (
           <div className="rounded-md overflow-hidden bg-warm-100 w-[5rem] shrink-0 self-stretch">
             <img
               src={incident.imageUrl}
