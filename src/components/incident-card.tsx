@@ -568,7 +568,7 @@ export function IncidentCard({
   // ---- NORMAL VIEW ----
   return (
     <article
-      className={`group border-b border-warm-200 py-5 cursor-pointer transition-colors hover:bg-warm-50/70 px-3 -mx-3 ${isPending ? "border-l-4 border-l-amber-400 bg-amber-50/30" : ""}`}
+      className={`group border-b border-warm-200 py-5 cursor-pointer transition-colors hover:bg-warm-50/70 px-3 -mx-3`}
       onClick={() => handleExpand()}
     >
       <div className="flex items-stretch gap-3">
