@@ -73,7 +73,7 @@ function Inner({ children }: { children: ReactNode }) {
               rel="noopener noreferrer"
               className="px-3 py-1.5 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-sm"
             >
-              ❤ Donate
+              Support Our Work
             </a>
           </div>
           <a
