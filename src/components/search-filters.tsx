@@ -184,7 +184,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
       </div>
 
       {/* Location + date range row */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
         <input
           type="text"
           placeholder={t.locationPlaceholder}
@@ -196,9 +196,9 @@ export function SearchFilters({ countries }: { countries: string[] }) {
             }, 300);
             return () => clearTimeout(timeout);
           }}
-          className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500 w-44"
+          className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500 w-full sm:w-44"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-warm-500">{t.from}</span>
           <input
             type="date"
@@ -206,7 +206,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
             onChange={(e) =>
               updateFilters({ from: e.target.value || null, range: null })
             }
-            className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500"
+            className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500 max-w-[150px]"
           />
           <span className="text-sm text-warm-500">{t.to}</span>
           <input
@@ -215,7 +215,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
             onChange={(e) =>
               updateFilters({ to: e.target.value || null, range: null })
             }
-            className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500"
+            className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500 max-w-[150px]"
           />
         </div>
         <button

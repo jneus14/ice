@@ -129,7 +129,7 @@ function SiteHeader() {
   const { t } = useLanguage();
   return (
     <header className="bg-warm-900 text-white">
-      <div className="max-w-6xl mx-auto px-6 py-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
         <a href="/" className="block group">
           <h1 className="text-3xl font-bold tracking-tight font-serif bg-gradient-to-r from-white via-orange-100 to-amber-200 bg-clip-text text-transparent drop-shadow-sm leading-snug">
             {t.siteTitle}
@@ -147,7 +147,7 @@ function SiteFooter() {
   const { t } = useLanguage();
   return (
     <footer className="border-t border-warm-200 mt-16">
-      <div className="max-w-6xl mx-auto px-6 py-6 text-sm text-warm-400">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-sm text-warm-400">
         {t.footerText}
       </div>
     </footer>
@@ -203,7 +203,7 @@ function Inner({ children }: { children: ReactNode }) {
         </div>
       </div>
       <SiteHeader />
-      <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">{children}</main>
       <SiteFooter />
     </>
   );
