@@ -43,6 +43,7 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
 }
 
 Rules:
+- IMPORTANT: This tracker is ONLY for news stories about specific immigration enforcement incidents. If the article is legal advice, a know-your-rights guide, a general explainer, a data report without a specific incident, a resource page, or an academic paper, return ALL fields as null.
 - The page metadata (og:title, og:description, etc.) is provided by the publisher and is generally reliable for headline and summary. Use it as a strong starting point.
 - Only use tags from the provided list. Use multiple comma-separated tags when applicable.
 - TAG DEFINITIONS — apply tags precisely:
