@@ -129,12 +129,12 @@ function SiteHeader() {
   const { t } = useLanguage();
   return (
     <header className="bg-warm-900 text-white">
-      <div className="max-w-6xl mx-auto px-6 py-7">
+      <div className="max-w-6xl mx-auto px-6 py-4">
         <a href="/" className="block group">
-          <h1 className="text-5xl font-bold tracking-tight font-serif bg-gradient-to-r from-white via-orange-100 to-amber-200 bg-clip-text text-transparent drop-shadow-sm py-1 leading-normal">
+          <h1 className="text-3xl font-bold tracking-tight font-serif bg-gradient-to-r from-white via-orange-100 to-amber-200 bg-clip-text text-transparent drop-shadow-sm leading-snug">
             {t.siteTitle}
           </h1>
-          <p className="text-warm-300 mt-3 text-lg leading-relaxed max-w-3xl font-light tracking-wide">
+          <p className="text-warm-400 mt-1 text-sm leading-relaxed max-w-3xl font-light tracking-wide">
             {t.siteDescription}
           </p>
         </a>
