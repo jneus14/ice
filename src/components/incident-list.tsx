@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { IncidentCard } from "./incident-card";
 import { useLanguage } from "@/lib/i18n";
 
@@ -39,7 +39,6 @@ function useTranslations(incidents: Incident[], lang: string): { map: Translatio
     const ids = incidents.map((i) => i.id);
     const key = cacheKey(ids);
 
-    // Check sessionStorage cache
     try {
       const cached = sessionStorage.getItem(key);
       if (cached) {
@@ -48,7 +47,6 @@ function useTranslations(incidents: Incident[], lang: string): { map: Translatio
       }
     } catch {}
 
-    // Translate headlines only in chunks of 15 (summaries translated lazily on expand)
     setLoading(true);
     const toTranslate = incidents.map((i) => ({ id: i.id, headline: i.headline }));
 
@@ -87,6 +85,104 @@ function useTranslations(incidents: Incident[], lang: string): { map: Translatio
   return { map, loading };
 }
 
+function BulkToolbar({
+  items,
+  selected,
+  setSelected,
+  label,
+}: {
+  items: Incident[];
+  selected: Set<number>;
+  setSelected: (s: Set<number>) => void;
+  label: string;
+}) {
+  const router = useRouter();
+  const [acting, setActing] = useState(false);
+  const allSelected = items.length > 0 && selected.size === items.length;
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(items.map((i) => i.id)));
+    }
+  }
+
+  async function bulkApprove() {
+    if (selected.size === 0) return;
+    setActing(true);
+    try {
+      const promises = Array.from(selected).map((id) =>
+        fetch(`/api/incidents/${id}/approve`, {
+          method: "POST",
+          headers: { "x-edit-password": "acab" },
+        })
+      );
+      await Promise.all(promises);
+      setSelected(new Set());
+      router.refresh();
+    } catch {}
+    setActing(false);
+  }
+
+  async function bulkDelete() {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} incident(s)? This cannot be undone.`)) return;
+    setActing(true);
+    try {
+      const promises = Array.from(selected).map((id) =>
+        fetch(`/api/incidents/${id}`, {
+          method: "DELETE",
+          headers: { "x-edit-password": "acab" },
+        })
+      );
+      await Promise.all(promises);
+      setSelected(new Set());
+      router.refresh();
+    } catch {}
+    setActing(false);
+  }
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-3 mb-2 px-1">
+      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={toggleAll}
+          className="w-3.5 h-3.5 rounded border-warm-400 text-blue-600 focus:ring-blue-500 cursor-pointer"
+        />
+        <span className="text-xs text-warm-500 font-medium">
+          {allSelected ? "Deselect all" : `Select all ${label}`}
+        </span>
+      </label>
+      {selected.size > 0 && (
+        <>
+          <span className="text-xs text-warm-400">
+            {selected.size} selected
+          </span>
+          <button
+            onClick={bulkApprove}
+            disabled={acting}
+            className="px-2.5 py-1 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60"
+          >
+            {acting ? "…" : `✓ Approve ${selected.size}`}
+          </button>
+          <button
+            onClick={bulkDelete}
+            disabled={acting}
+            className="px-2.5 py-1 text-xs font-medium rounded-md border border-red-300 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60"
+          >
+            {acting ? "…" : `✕ Delete ${selected.size}`}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function IncidentList({
   incidents,
   total,
@@ -106,6 +202,7 @@ export function IncidentList({
 }) {
   const { t, lang } = useLanguage();
   const { map: translations, loading: translating } = useTranslations(incidents, lang);
+  const [pendingSelected, setPendingSelected] = useState<Set<number>>(new Set());
 
   return (
     <div>
@@ -133,12 +230,38 @@ export function IncidentList({
             </span>
           </div>
           <div className="border border-amber-200 rounded-lg overflow-hidden bg-amber-50/20">
-            {pendingIncidents.map((incident) => (
-              <IncidentCard
-                key={incident.id}
-                incident={incident}
-                editMode={editMode}
+            <div className="px-3 pt-2">
+              <BulkToolbar
+                items={pendingIncidents}
+                selected={pendingSelected}
+                setSelected={setPendingSelected}
+                label="pending"
               />
+            </div>
+            {pendingIncidents.map((incident) => (
+              <div key={incident.id} className="flex items-start">
+                {/* Checkbox */}
+                <div className="pt-6 pl-3 pr-0 shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={pendingSelected.has(incident.id)}
+                    onChange={(e) => {
+                      const next = new Set(pendingSelected);
+                      if (e.target.checked) next.add(incident.id);
+                      else next.delete(incident.id);
+                      setPendingSelected(next);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-3.5 h-3.5 rounded border-warm-400 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <IncidentCard
+                    incident={incident}
+                    editMode={editMode}
+                  />
+                </div>
+              </div>
             ))}
           </div>
         </div>
