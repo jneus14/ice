@@ -38,16 +38,24 @@ export async function POST(
 
   const incident = await prisma.incident.findUnique({
     where: { id },
-    select: { headline: true, url: true, altSources: true },
+    select: { headline: true, summary: true, url: true, altSources: true },
   });
 
-  if (!incident?.headline) {
+  if (!incident) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const query = incident.headline || incident.summary;
+  if (!query) {
+    return NextResponse.json(
+      { error: "No headline or summary to search with" },
+      { status: 400 }
+    );
   }
 
   try {
     const exa = new Exa(exaKey);
-    const results = await exa.search(incident.headline, {
+    const results = await exa.search(query, {
       numResults: 8,
       type: "keyword",
       excludeDomains: SOCIAL_DOMAINS,

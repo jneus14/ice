@@ -982,6 +982,9 @@ export function IncidentCard({
         )}
       </div>
       {/* Edit mode actions */}
+      {editMode && error && (
+        <p className="mt-2 ml-0 text-xs text-red-500">{error}</p>
+      )}
       {editMode && (
         <div className="mt-2 flex items-center gap-2 ml-0">
           {isPending && (
