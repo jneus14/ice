@@ -176,6 +176,7 @@ export function IncidentCard({
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const [approving, setApproving] = useState(false);
   const [combining, setCombining] = useState(false);
@@ -276,6 +277,7 @@ export function IncidentCard({
   async function handleSearchSources() {
     setSearchingSources(true);
     setError(null);
+    setSuccessMsg(null);
     try {
       const res = await fetch(`/api/incidents/${incident.id}/search-sources`, {
         method: "POST",
@@ -284,6 +286,7 @@ export function IncidentCard({
       const data = await res.json();
       if (res.ok) {
         if (data.added > 0) {
+          setSuccessMsg(`Found ${data.added} new source${data.added === 1 ? "" : "s"}`);
           router.refresh();
         } else {
           setError("No new sources found");
@@ -982,8 +985,8 @@ export function IncidentCard({
         )}
       </div>
       {/* Edit mode actions */}
-      {editMode && error && (
-        <p className="mt-2 ml-0 text-xs text-red-500">{error}</p>
+      {editMode && (error || successMsg) && (
+        <p className={`mt-2 ml-0 text-xs ${error ? "text-red-500" : "text-green-600"}`}>{error || successMsg}</p>
       )}
       {editMode && (
         <div className="mt-2 flex items-center gap-2 ml-0">
