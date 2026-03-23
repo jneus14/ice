@@ -1,12 +1,18 @@
 import { prisma } from "@/lib/db";
 import { IncidentTable } from "@/components/admin/incident-table";
 import { BackfillButton } from "@/components/admin/backfill-button";
+import { FeedbackPanel } from "@/components/admin/feedback-panel";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const incidents = await prisma.incident.findMany({
     orderBy: { createdAt: "desc" },
+  });
+
+  const feedback = await prisma.feedback.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 50,
   });
 
   const stats = {
@@ -32,6 +38,9 @@ export default async function AdminPage() {
       <div className="flex gap-3 items-center">
         <BackfillButton />
       </div>
+
+      {/* Feedback */}
+      {feedback.length > 0 && <FeedbackPanel feedback={feedback} />}
 
       <IncidentTable incidents={incidents} />
     </div>
