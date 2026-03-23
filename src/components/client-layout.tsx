@@ -71,7 +71,7 @@ function Inner({ children }: { children: ReactNode }) {
               href="https://secure.givelively.org/donate/human-security-initiative"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1.5 text-sm font-medium rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
+              className="px-3 py-1.5 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-sm"
             >
               ❤ Donate
             </a>
