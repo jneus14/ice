@@ -1,5 +1,18 @@
 import { prisma } from "./db";
 
+export function parseFiltersFromParams(params: URLSearchParams): IncidentFilters {
+  return {
+    search: params.get("q") || undefined,
+    tags: params.getAll("tag").length > 0 ? params.getAll("tag") : undefined,
+    tagMode: (params.get("tagMode") as "all" | "any") || undefined,
+    location: params.get("location") || undefined,
+    country: params.get("country") || undefined,
+    dateFrom: params.get("from") || undefined,
+    dateTo: params.get("to") || undefined,
+    range: params.get("range") || undefined,
+  };
+}
+
 export type IncidentFilters = {
   search?: string;
   tags?: string[];
@@ -29,7 +42,7 @@ function getDateCutoff(range: string): Date | null {
   }
 }
 
-function buildFilterWhere(filters: IncidentFilters): any {
+export function buildFilterWhere(filters: IncidentFilters): any {
   const { search, tags, tagMode = "all", location, country, range, dateFrom, dateTo } = filters;
   const AND: any[] = [];
 

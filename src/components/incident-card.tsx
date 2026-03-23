@@ -188,6 +188,8 @@ export function IncidentCard({
   const [inlineEditing, setInlineEditing] = useState<"headline" | "summary" | null>(null);
   const [inlineValue, setInlineValue] = useState("");
   const [inlineSaving, setInlineSaving] = useState(false);
+  const [relatedStories, setRelatedStories] = useState<Array<{ id: number; headline: string; date: string | null; location: string | null }> | null>(null);
+  const [loadingRelated, setLoadingRelated] = useState(false);
 
   const isPending = editMode && incident.approved === false;
 
@@ -349,6 +351,15 @@ export function IncidentCard({
   function handleExpand() {
     const next = !expanded;
     setExpanded(next);
+    // Lazily fetch related stories
+    if (next && relatedStories === null && !loadingRelated) {
+      setLoadingRelated(true);
+      fetch(`/api/incidents/${incident.id}/related`)
+        .then((r) => r.json())
+        .then((d) => setRelatedStories(d.related ?? []))
+        .catch(() => setRelatedStories([]))
+        .finally(() => setLoadingRelated(false));
+    }
     // Lazily translate summary when expanding in Spanish mode
     if (next && translateSummary && incident.summary && !translatedSummary && !translatingSum) {
       const cacheKey = `summary:es:${incident.id}`;
@@ -894,6 +905,28 @@ export function IncidentCard({
                     </span>
                   ))}
                 </div>
+              )}
+              {/* Related stories */}
+              {relatedStories && relatedStories.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-warm-100">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-warm-400 mb-2">Related stories</p>
+                  <div className="space-y-1">
+                    {relatedStories.map((rs) => (
+                      <a
+                        key={rs.id}
+                        href={`/?q=${encodeURIComponent(rs.headline?.split(" ").slice(0, 4).join(" ") ?? "")}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="block text-sm text-warm-600 hover:text-warm-900 hover:underline transition-colors"
+                      >
+                        {rs.headline}
+                        {rs.date && <span className="text-warm-400 text-xs ml-1.5">· {rs.date}</span>}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {loadingRelated && (
+                <p className="text-xs text-warm-400 italic mt-2">Loading related stories…</p>
               )}
             </div>
           )}
