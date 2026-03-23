@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import Exa from "exa-js";
 
@@ -19,74 +19,94 @@ function sleep(ms: number) {
 
 export async function POST(req: NextRequest) {
   if (req.headers.get("x-edit-password") !== "acab") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
   }
 
   const exaKey = process.env.EXA_API_KEY;
   if (!exaKey) {
-    return NextResponse.json(
-      { error: "EXA_API_KEY not configured" },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "EXA_API_KEY not configured" }), {
+      status: 500,
+    });
   }
 
-  const incidents = await prisma.incident.findMany({
-    where: {
-      headline: { not: null },
-      status: "COMPLETE",
-      OR: [{ altSources: null }, { altSources: "[]" }, { altSources: "" }],
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      function send(msg: string) {
+        controller.enqueue(encoder.encode(msg + "\n"));
+      }
+
+      try {
+        const incidents = await prisma.incident.findMany({
+          where: {
+            headline: { not: null },
+            status: "COMPLETE",
+            OR: [{ altSources: null }, { altSources: "[]" }, { altSources: "" }],
+          },
+          select: { id: true, headline: true, url: true },
+          orderBy: { id: "desc" },
+        });
+
+        send(`Found ${incidents.length} incidents without alt sources`);
+
+        const exa = new Exa(exaKey);
+        let updated = 0;
+        let totalSources = 0;
+
+        for (let i = 0; i < incidents.length; i++) {
+          const inc = incidents[i];
+          try {
+            const results = await exa.search(inc.headline!, {
+              numResults: 5,
+              type: "keyword",
+              excludeDomains: SOCIAL_DOMAINS,
+            });
+
+            const newsUrls = (results.results || [])
+              .filter(
+                (r) =>
+                  r.url &&
+                  r.url !== inc.url &&
+                  !SOCIAL_DOMAINS.some((d) => r.url.includes(d))
+              )
+              .map((r) => r.url);
+
+            if (newsUrls.length > 0) {
+              await prisma.incident.update({
+                where: { id: inc.id },
+                data: { altSources: JSON.stringify(newsUrls) },
+              });
+              updated++;
+              totalSources += newsUrls.length;
+              send(`[${i + 1}/${incidents.length}] #${inc.id}: +${newsUrls.length} sources`);
+            } else {
+              send(`[${i + 1}/${incidents.length}] #${inc.id}: no sources found`);
+            }
+          } catch (e: any) {
+            if (e.message?.includes("429") || e.message?.includes("rate")) {
+              send(`Rate limited, waiting 3s...`);
+              await sleep(3000);
+              i--;
+              continue;
+            }
+            send(`[${i + 1}/${incidents.length}] #${inc.id} ERROR: ${e.message?.substring(0, 80)}`);
+          }
+
+          await sleep(300);
+        }
+
+        send(`\nDone! Updated ${updated}/${incidents.length} incidents with ${totalSources} total sources.`);
+      } catch (e: any) {
+        send(`Fatal error: ${e.message}`);
+      } finally {
+        controller.close();
+      }
     },
-    select: { id: true, headline: true, url: true },
-    orderBy: { id: "desc" },
   });
 
-  const exa = new Exa(exaKey);
-  let updated = 0;
-  let totalSources = 0;
-  const errors: string[] = [];
-
-  for (let i = 0; i < incidents.length; i++) {
-    const inc = incidents[i];
-    try {
-      const results = await exa.search(inc.headline!, {
-        numResults: 5,
-        type: "keyword",
-        excludeDomains: SOCIAL_DOMAINS,
-      });
-
-      const newsUrls = (results.results || [])
-        .filter(
-          (r) =>
-            r.url &&
-            r.url !== inc.url &&
-            !SOCIAL_DOMAINS.some((d) => r.url.includes(d))
-        )
-        .map((r) => r.url);
-
-      if (newsUrls.length > 0) {
-        await prisma.incident.update({
-          where: { id: inc.id },
-          data: { altSources: JSON.stringify(newsUrls) },
-        });
-        updated++;
-        totalSources += newsUrls.length;
-      }
-    } catch (e: any) {
-      if (e.message?.includes("429") || e.message?.includes("rate")) {
-        await sleep(3000);
-        i--; // retry
-        continue;
-      }
-      errors.push(`[${inc.id}] ${e.message?.substring(0, 80)}`);
-    }
-
-    await sleep(300);
-  }
-
-  return NextResponse.json({
-    total_incidents: incidents.length,
-    updated,
-    sources_added: totalSources,
-    errors: errors.length > 0 ? errors : undefined,
+  return new Response(stream, {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
 }
