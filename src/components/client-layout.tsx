@@ -183,6 +183,12 @@ function Inner({ children }: { children: ReactNode }) {
           </a>
           {/* Right: action buttons */}
           <div className="flex items-center gap-2">
+            <a
+              href="/analytics"
+              className="px-2.5 py-1.5 text-xs sm:text-sm font-medium rounded-md border border-warm-300 text-warm-600 hover:bg-warm-50 transition-colors whitespace-nowrap"
+            >
+              📊 <span className="hidden sm:inline">Analytics</span>
+            </a>
             <LanguageToggle />
             <FeedbackButton />
             <a

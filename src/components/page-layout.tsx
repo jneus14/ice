@@ -54,6 +54,10 @@ export function PageLayout({
 }) {
   const [showMap, setShowMap] = useState(true);
   const [editMode, setEditMode] = useState(false);
+  const [nearbyMode, setNearbyMode] = useState(false);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbyIncidents, setNearbyIncidents] = useState<Incident[]>([]);
+  const [nearbyRadius, setNearbyRadius] = useState(50);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
@@ -61,6 +65,34 @@ export function PageLayout({
   const { t } = useLanguage();
 
   const hasMap = mapIncidents.length > 0;
+
+  function handleNearMe() {
+    if (nearbyMode) {
+      setNearbyMode(false);
+      setNearbyIncidents([]);
+      return;
+    }
+    setNearbyLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(
+            `/api/incidents/nearby?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius=${nearbyRadius}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setNearbyIncidents(data.incidents ?? []);
+            setNearbyMode(true);
+          }
+        } catch {}
+        setNearbyLoading(false);
+      },
+      () => {
+        alert("Location access denied. Please enable location services.");
+        setNearbyLoading(false);
+      }
+    );
+  }
 
   function openPasswordModal() {
     setPasswordInput("");
@@ -121,6 +153,13 @@ export function PageLayout({
               </svg>
             </button>
           )}
+          <button
+            onClick={handleNearMe}
+            disabled={nearbyLoading}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors shadow-sm ${nearbyMode ? "bg-blue-600 text-white border-blue-600" : "text-warm-600 bg-white border-warm-300 hover:bg-warm-50"}`}
+          >
+            📍 {nearbyLoading ? "Locating…" : nearbyMode ? "Exit nearby" : "Near me"}
+          </button>
           {hasMap && (
             <button
               onClick={() => setShowMap(!showMap)}
@@ -140,13 +179,38 @@ export function PageLayout({
 
       {hasMap && <IncidentMap incidents={mapIncidents} showMap={showMap} />}
 
+      {/* Nearby results banner */}
+      {nearbyMode && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+          <div>
+            <span className="text-sm font-semibold text-blue-800">
+              📍 {nearbyIncidents.length} incident{nearbyIncidents.length === 1 ? "" : "s"} within {nearbyRadius} miles
+            </span>
+            <span className="text-xs text-blue-500 ml-2">
+              Sorted by distance
+            </span>
+          </div>
+          <select
+            value={nearbyRadius}
+            onChange={(e) => { setNearbyRadius(parseInt(e.target.value)); handleNearMe(); }}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs border border-blue-300 rounded px-2 py-1 bg-white"
+          >
+            <option value="10">10 miles</option>
+            <option value="25">25 miles</option>
+            <option value="50">50 miles</option>
+            <option value="100">100 miles</option>
+          </select>
+        </div>
+      )}
+
       {/* Incident list */}
       <IncidentList
-        incidents={incidents}
-        total={total}
-        totalAll={totalAll}
-        page={page}
-        totalPages={totalPages}
+        incidents={nearbyMode ? nearbyIncidents as any : incidents}
+        total={nearbyMode ? nearbyIncidents.length : total}
+        totalAll={nearbyMode ? nearbyIncidents.length : totalAll}
+        page={nearbyMode ? 1 : page}
+        totalPages={nearbyMode ? 1 : totalPages}
         editMode={editMode}
         pendingIncidents={editMode ? pendingIncidents : []}
       />
