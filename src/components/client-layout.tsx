@@ -162,8 +162,8 @@ function Inner({ children }: { children: ReactNode }) {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FeedbackButton />
             <LanguageToggle />
+            <FeedbackButton />
             <a
               href="https://secure.givelively.org/donate/human-security-initiative"
               target="_blank"
