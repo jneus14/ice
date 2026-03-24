@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { IncidentCard } from "./incident-card";
 import { useLanguage } from "@/lib/i18n";
+import { clusterIncidents, type ClusterableIncident } from "@/lib/cluster";
 
 type Incident = {
   id: number;
@@ -183,6 +184,170 @@ function BulkToolbar({
   );
 }
 
+function PendingSection({
+  pendingIncidents,
+  pendingSelected,
+  setPendingSelected,
+  editMode,
+}: {
+  pendingIncidents: Incident[];
+  pendingSelected: Set<number>;
+  setPendingSelected: (s: Set<number>) => void;
+  editMode: boolean;
+}) {
+  const router = useRouter();
+  const [mergingCluster, setMergingCluster] = useState<number | null>(null);
+
+  // Cluster pending incidents by similarity
+  const clusters = useMemo(() => {
+    const result = clusterIncidents(
+      pendingIncidents.map((i) => ({
+        id: i.id,
+        headline: i.headline,
+        date: i.date,
+        location: i.location,
+        summary: i.summary,
+      }))
+    );
+    return result;
+  }, [pendingIncidents]);
+
+  // Build a map: incidentId → cluster index
+  const idToCluster = useMemo(() => {
+    const map = new Map<number, number>();
+    clusters.forEach((c, idx) => {
+      for (const id of c.ids) map.set(id, idx);
+    });
+    return map;
+  }, [clusters]);
+
+  // Separate: clustered vs unclustered
+  const clusteredIds = new Set(clusters.flatMap((c) => c.ids));
+  const unclustered = pendingIncidents.filter((i) => !clusteredIds.has(i.id));
+
+  async function handleMergeCluster(clusterIdx: number, approve: boolean) {
+    const cluster = clusters[clusterIdx];
+    if (!cluster) return;
+    setMergingCluster(clusterIdx);
+    try {
+      const res = await fetch("/api/incidents/cluster-merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+        body: JSON.stringify({ ids: cluster.ids, approve }),
+      });
+      if (res.ok) {
+        router.refresh();
+      }
+    } catch {}
+    setMergingCluster(null);
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-300">
+          ⏳ {pendingIncidents.length} pending review
+        </span>
+        <span className="text-xs text-warm-400">
+          These stories are not yet visible to the public.
+        </span>
+      </div>
+
+      {/* Clustered stories — groups of stories about the same incident */}
+      {clusters.map((cluster, idx) => {
+        const clusterIncidents_ = cluster.ids
+          .map((id) => pendingIncidents.find((i) => i.id === id))
+          .filter(Boolean) as Incident[];
+        const isMerging = mergingCluster === idx;
+
+        return (
+          <div key={`cluster-${idx}`} className="mb-4 border-2 border-blue-300 rounded-lg overflow-hidden bg-blue-50/30">
+            <div className="px-3 py-2 bg-blue-100/50 border-b border-blue-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-blue-800">
+                  🔗 {clusterIncidents_.length} stories about the same incident
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleMergeCluster(idx, true)}
+                  disabled={isMerging}
+                  className="px-3 py-1 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60"
+                >
+                  {isMerging ? "Merging…" : "✓ Merge & Approve"}
+                </button>
+                <button
+                  onClick={() => handleMergeCluster(idx, false)}
+                  disabled={isMerging}
+                  className="px-3 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60"
+                >
+                  {isMerging ? "Merging…" : "Merge (keep pending)"}
+                </button>
+              </div>
+            </div>
+            {clusterIncidents_.map((incident) => (
+              <div key={incident.id} className="flex items-start">
+                <div className="pt-6 pl-3 pr-0 shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={pendingSelected.has(incident.id)}
+                    onChange={(e) => {
+                      const next = new Set(pendingSelected);
+                      if (e.target.checked) next.add(incident.id);
+                      else next.delete(incident.id);
+                      setPendingSelected(next);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-3.5 h-3.5 rounded border-warm-400 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <IncidentCard incident={incident} editMode={editMode} />
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+
+      {/* Unclustered stories — unique incidents */}
+      {unclustered.length > 0 && (
+        <div className="border border-amber-200 rounded-lg overflow-hidden bg-amber-50/20">
+          <div className="px-3 pt-2">
+            <BulkToolbar
+              items={unclustered}
+              selected={pendingSelected}
+              setSelected={setPendingSelected}
+              label="pending"
+            />
+          </div>
+          {unclustered.map((incident) => (
+            <div key={incident.id} className="flex items-start">
+              <div className="pt-6 pl-3 pr-0 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={pendingSelected.has(incident.id)}
+                  onChange={(e) => {
+                    const next = new Set(pendingSelected);
+                    if (e.target.checked) next.add(incident.id);
+                    else next.delete(incident.id);
+                    setPendingSelected(next);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-3.5 h-3.5 rounded border-warm-400 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <IncidentCard incident={incident} editMode={editMode} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function IncidentList({
   incidents,
   total,
@@ -220,51 +385,12 @@ export function IncidentList({
 
       {/* Pending incidents - only shown in edit mode */}
       {editMode && pendingIncidents.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-300">
-              ⏳ {pendingIncidents.length} pending review
-            </span>
-            <span className="text-xs text-warm-400">
-              These stories are not yet visible to the public.
-            </span>
-          </div>
-          <div className="border border-amber-200 rounded-lg overflow-hidden bg-amber-50/20">
-            <div className="px-3 pt-2">
-              <BulkToolbar
-                items={pendingIncidents}
-                selected={pendingSelected}
-                setSelected={setPendingSelected}
-                label="pending"
-              />
-            </div>
-            {pendingIncidents.map((incident) => (
-              <div key={incident.id} className="flex items-start">
-                {/* Checkbox */}
-                <div className="pt-6 pl-3 pr-0 shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={pendingSelected.has(incident.id)}
-                    onChange={(e) => {
-                      const next = new Set(pendingSelected);
-                      if (e.target.checked) next.add(incident.id);
-                      else next.delete(incident.id);
-                      setPendingSelected(next);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-3.5 h-3.5 rounded border-warm-400 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <IncidentCard
-                    incident={incident}
-                    editMode={editMode}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <PendingSection
+          pendingIncidents={pendingIncidents}
+          pendingSelected={pendingSelected}
+          setPendingSelected={setPendingSelected}
+          editMode={editMode}
+        />
       )}
 
       {incidents.length === 0 ? (

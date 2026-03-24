@@ -39,7 +39,7 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
   "date": "The date of the incident in M/D/YYYY format if available, otherwise null",
   "location": "City, State abbreviation (e.g. 'Chicago, IL') if available, otherwise null",
   "summary": "A 2-4 sentence factual summary of what happened",
-  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention",
+  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention",
   "country": "Country of origin of the affected person if mentioned, otherwise null"
 }
 
@@ -51,6 +51,8 @@ Rules:
   - "Raid": ONLY for enforcement operations where officers storm/sweep a location and detain multiple people (workplace raids, neighborhood sweeps, multi-person operations). Do NOT use for targeted arrests of a single individual or for stories about planned detention facilities.
   - "Policy/Stats": for stories about general immigration policy, enforcement statistics, cumulative data, or systemic effects that do NOT focus on a specific individual's incident. Examples: "ICE arrests exceed 1,000 daily", "Deportation flights increase 40%", reports on aggregate detention numbers. Use this instead of Detained/Disappearance/Detention when no specific person is named or featured.
   - "Detained" / "Disappearance/Detention": ONLY when a specific, named or identified person is actually detained, disappeared, or held in custody in the story. Do NOT use for stories about aggregate arrest/detention statistics, general policy, planned facilities, or protests about detention. If the story is about overall enforcement numbers or policy trends, use "Policy/Stats" instead.
+  - "Family Separation": for stories where immigration enforcement separates family members — parents taken from children, children left behind after a parent is detained/deported, families split across borders, children placed in foster care due to parent's detention. Use alongside other tags as appropriate.
+  - "Deported": ONLY when a specific, named or identified person is actually deported or removed from the country in the story. Do NOT use for stories about aggregate deportation statistics, deportation policy changes, or general deportation trends. If the story is about overall deportation numbers or policy, use "Policy/Stats" instead.
   - "Resistance": for vigils, protests, rallies, community organizing, sanctuary movements, activist stories, community opposition to ICE facilities/operations, and cases where activists or advocates are targeted by ICE.
   - "Native American": ONLY for U.S. Native Americans (members of federally recognized tribes, e.g. Navajo, Oglala Sioux, Cherokee).
   - "Indigenous (Non-U.S.)": for indigenous people from other countries (e.g. indigenous Mexicans, Guatemalan Mayans, etc.).

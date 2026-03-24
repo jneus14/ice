@@ -6,6 +6,7 @@ export const INCIDENT_TYPE_TAGS = [
   { value: "3rd Country Deportation", label: "Third Country Deportation" },
   { value: "Detention Conditions", label: "Detention Conditions" },
   { value: "Detained", label: "Disappearance/Detention" },
+  { value: "Family Separation", label: "Family Separation" },
   { value: "Injury/Illness/Medical", label: "Illness/Injury" },
   { value: "Officer Misconduct", label: "Officer Misconduct" },
   { value: "Policy/Stats", label: "Policy/Stats" },
