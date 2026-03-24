@@ -532,7 +532,7 @@ export function IncidentCard({
   // ---- EDIT FORM VIEW ----
   if (editing) {
     return (
-      <article className="border-b border-warm-200 py-4 px-3 -mx-3 bg-amber-50/60">
+      <article id={`incident-${incident.id}`} className="border-b border-warm-200 py-4 px-3 -mx-3 bg-amber-50/60">
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[11px] font-semibold uppercase tracking-widest text-amber-700">
@@ -697,6 +697,7 @@ export function IncidentCard({
   // ---- NORMAL VIEW ----
   return (
     <article
+      id={`incident-${incident.id}`}
       className={`group border-b border-warm-200 py-5 cursor-pointer transition-colors hover:bg-warm-50/70 px-3 -mx-3`}
       onClick={() => handleExpand()}
     >

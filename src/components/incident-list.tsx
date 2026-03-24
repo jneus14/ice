@@ -390,8 +390,28 @@ export function IncidentList({
   pendingIncidents?: Incident[];
 }) {
   const { t, lang } = useLanguage();
+  const searchParams = useSearchParams();
   const { map: translations, loading: translating } = useTranslations(incidents, lang);
   const [pendingSelected, setPendingSelected] = useState<Set<number>>(new Set());
+
+  // Handle ?highlight=ID — scroll to and expand the incident
+  useEffect(() => {
+    const highlightId = searchParams.get("highlight");
+    if (!highlightId) return;
+    const el = document.getElementById(`incident-${highlightId}`);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-orange-400", "bg-orange-50/50", "rounded-lg");
+        // Click to expand
+        el.click();
+        // Remove highlight after a few seconds
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-orange-400", "bg-orange-50/50", "rounded-lg");
+        }, 4000);
+      }, 300);
+    }
+  }, [searchParams]);
 
   return (
     <div>
