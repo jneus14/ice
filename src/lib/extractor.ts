@@ -39,12 +39,12 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
   "date": "The date of the incident in M/D/YYYY format if available, otherwise null",
   "location": "City, State abbreviation (e.g. 'Chicago, IL') if available, otherwise null",
   "summary": "A 2-4 sentence factual summary of what happened",
-  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention",
+  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention",
   "country": "Country of origin of the affected person if mentioned, otherwise null"
 }
 
 Rules:
-- IMPORTANT: This tracker is ONLY for news stories about specific immigration enforcement incidents. If the article is legal advice, a know-your-rights guide, a general explainer, a data report without a specific incident, a resource page, or an academic paper, return ALL fields as null.
+- IMPORTANT: This tracker is primarily for news stories about specific immigration enforcement incidents. If the article is a general explainer or academic paper unrelated to enforcement, return ALL fields as null. However, if the article is legal advice, a know-your-rights guide, a resource page, or a toolkit for immigrants, tag it as "Resources" and extract what you can.
 - The page metadata (og:title, og:description, etc.) is provided by the publisher and is generally reliable for headline and summary. Use it as a strong starting point.
 - Only use tags from the provided list. Use multiple comma-separated tags when applicable.
 - TAG DEFINITIONS — apply tags precisely:
@@ -54,8 +54,10 @@ Rules:
   - "Family Separation": for stories where immigration enforcement separates family members — parents taken from children, children left behind after a parent is detained/deported, families split across borders, children placed in foster care due to parent's detention. Use alongside other tags as appropriate.
   - "Deported": ONLY when a specific, named or identified person is actually deported or removed from the country in the story. Do NOT use for stories about aggregate deportation statistics, deportation policy changes, or general deportation trends. If the story is about overall deportation numbers or policy, use "Policy/Stats" instead.
   - "Resistance": for vigils, protests, rallies, community organizing, sanctuary movements, activist stories, community opposition to ICE facilities/operations, and cases where activists or advocates are targeted by ICE.
+  - "Resources": for legal guides, know-your-rights information, toolkits for immigrants, legal resource directories, how-to guides for dealing with ICE encounters, immigration legal aid information, and similar practical resources. These are NOT news stories about specific incidents.
   - "Native American": ONLY for U.S. Native Americans (members of federally recognized tribes, e.g. Navajo, Oglala Sioux, Cherokee).
   - "Indigenous (Non-U.S.)": for indigenous people from other countries (e.g. indigenous Mexicans, Guatemalan Mayans, etc.).
+  - "Visa / Legal Status": ONLY for people who had a VALID, current visa or legal status at the time they were detained/deported (e.g. valid work visa, valid student visa, valid tourist visa, green card holders with valid status). Do NOT use for people who overstayed their visa, had expired status, or were undocumented. Overstaying a visa means they NO LONGER have valid status. Use "LPR" instead for lawful permanent residents (green card holders).
   - "Vigilante": ONLY for non-government actors — civilians impersonating ICE agents, bounty hunters, or vigilantes targeting immigrants. Do NOT use for real ICE/CBP agents using deceptive tactics (false pretenses, unmarked vehicles, fake stories) — those are "Officer Misconduct".
 - If you cannot determine a field, set it to null.
 - The summary should be strictly factual and neutral in tone. Describe only what happened — do not editorialize, assess significance, or use conclusory language.

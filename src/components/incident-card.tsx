@@ -187,6 +187,8 @@ export function IncidentCard({
   const [regenerating, setRegenerating] = useState(false);
   const [keywordSearch, setKeywordSearch] = useState("");
   const [keywordSearching, setKeywordSearching] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [inlineEditing, setInlineEditing] = useState<"headline" | "summary" | null>(null);
   const [inlineValue, setInlineValue] = useState("");
   const [inlineSaving, setInlineSaving] = useState(false);
@@ -255,6 +257,20 @@ export function IncidentCard({
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
         body: JSON.stringify({ incidentType: newTags.join(", ") }),
+      });
+      router.refresh();
+    } catch {}
+  }
+
+  async function addTag(tag: string) {
+    const currentTags = (incident.incidentType ?? "").split(",").map(t => t.trim()).filter(Boolean);
+    if (currentTags.includes(tag)) return;
+    currentTags.push(tag);
+    try {
+      await fetch(`/api/incidents/${incident.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+        body: JSON.stringify({ incidentType: currentTags.join(", ") }),
       });
       router.refresh();
     } catch {}
@@ -945,6 +961,42 @@ export function IncidentCard({
                       </a>
                     )
                   ))}
+                  {editMode && (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => { setTagInput(e.target.value); setTagDropdownOpen(true); }}
+                        onFocus={() => setTagDropdownOpen(true)}
+                        onBlur={() => setTimeout(() => setTagDropdownOpen(false), 200)}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="+ tag"
+                        className="w-20 px-2 py-0.5 text-[0.7rem] rounded-full border border-dashed border-warm-300 text-warm-500 placeholder:text-warm-300 focus:outline-none focus:border-blue-400 focus:w-36 transition-all"
+                      />
+                      {tagDropdownOpen && tagInput.length > 0 && (() => {
+                        const currentTags = (incident.incidentType ?? "").split(",").map(t => t.trim()).filter(Boolean);
+                        const allTags = [...INCIDENT_TYPE_TAGS, ...PERSON_IMPACTED_TAGS];
+                        const filtered = allTags.filter(t =>
+                          !currentTags.includes(t.value) &&
+                          (t.value.toLowerCase().includes(tagInput.toLowerCase()) || t.label.toLowerCase().includes(tagInput.toLowerCase()))
+                        );
+                        if (filtered.length === 0) return null;
+                        return (
+                          <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-warm-200 rounded-lg shadow-lg max-h-48 overflow-y-auto min-w-[200px]">
+                            {filtered.map(t => (
+                              <button
+                                key={t.value}
+                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); addTag(t.value); setTagInput(""); setTagDropdownOpen(false); }}
+                                className="block w-full text-left px-3 py-1.5 text-xs text-warm-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                              >
+                                {t.label}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
               )}
               {/* Related stories (collapsed by default) */}
