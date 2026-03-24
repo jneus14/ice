@@ -900,32 +900,50 @@ export function IncidentCard({
               {rawTags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {incidentTypeTags.map((tag) => (
-                    <span
-                      key={`it:${tag}`}
-                      className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200 inline-flex items-center gap-1"
-                    >
-                      {t.tags.incidentTypes[tag] ?? getTagLabel(tag)}
-                      {editMode && (
+                    editMode ? (
+                      <span
+                        key={`it:${tag}`}
+                        className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200 inline-flex items-center gap-1"
+                      >
+                        {t.tags.incidentTypes[tag] ?? getTagLabel(tag)}
                         <button
                           onClick={(e) => { e.stopPropagation(); removeTag(tag); }}
                           className="text-blue-400 hover:text-red-500 ml-0.5 leading-none"
                         >✕</button>
-                      )}
-                    </span>
+                      </span>
+                    ) : (
+                      <a
+                        key={`it:${tag}`}
+                        href={`/?tag=${encodeURIComponent(tag)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200 inline-flex items-center gap-1 hover:bg-blue-100 transition-colors cursor-pointer no-underline"
+                      >
+                        {t.tags.incidentTypes[tag] ?? getTagLabel(tag)}
+                      </a>
+                    )
                   ))}
                   {personImpactedTags.map((tag) => (
-                    <span
-                      key={`pi:${tag}`}
-                      className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200 inline-flex items-center gap-1"
-                    >
-                      {t.tags.personImpacted[tag] ?? getTagLabel(tag)}
-                      {editMode && (
+                    editMode ? (
+                      <span
+                        key={`pi:${tag}`}
+                        className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200 inline-flex items-center gap-1"
+                      >
+                        {t.tags.personImpacted[tag] ?? getTagLabel(tag)}
                         <button
                           onClick={(e) => { e.stopPropagation(); removeTag(tag); }}
                           className="text-purple-400 hover:text-red-500 ml-0.5 leading-none"
                         >✕</button>
-                      )}
-                    </span>
+                      </span>
+                    ) : (
+                      <a
+                        key={`pi:${tag}`}
+                        href={`/?tag=${encodeURIComponent(tag)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-purple-50 text-purple-600 border border-purple-200 inline-flex items-center gap-1 hover:bg-purple-100 transition-colors cursor-pointer no-underline"
+                      >
+                        {t.tags.personImpacted[tag] ?? getTagLabel(tag)}
+                      </a>
+                    )
                   ))}
                 </div>
               )}
