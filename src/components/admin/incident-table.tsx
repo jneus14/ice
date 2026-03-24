@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   updateIncidentData,
   deleteIncident,
-  findAndMergeDuplicates,
   findDuplicateCandidates,
   mergeIncidents,
   bulkAddUrls,
@@ -611,9 +610,17 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
     setDeduping(true);
     setDedupeMsg(null);
     try {
-      const result = await findAndMergeDuplicates();
-      setDedupeMsg(result.message);
-      router.refresh();
+      const res = await fetch("/api/admin/deduplicate", {
+        method: "POST",
+        headers: { "x-edit-password": "acab" },
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setDedupeMsg(result.message);
+        router.refresh();
+      } else {
+        setDedupeMsg("Error: " + (result.error ?? "Unknown error"));
+      }
     } catch (e: any) {
       setDedupeMsg("Error: " + e.message);
     } finally {
