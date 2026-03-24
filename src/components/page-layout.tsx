@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Suspense } from "react";
 import { SearchFilters } from "@/components/search-filters";
 import { IncidentMap } from "@/components/incident-map";
@@ -61,6 +61,22 @@ export function PageLayout({
   const { t } = useLanguage();
 
   const hasMap = mapIncidents.length > 0;
+
+  // Cmd+Shift+E (Mac) or Ctrl+Shift+E (Windows/Linux) to toggle edit mode
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.key === " ") {
+        e.preventDefault();
+        if (editMode) {
+          setEditMode(false);
+        } else {
+          openPasswordModal();
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editMode]);
 
   function openPasswordModal() {
     setPasswordInput("");
