@@ -16,12 +16,21 @@ function sleep(ms: number) {
 }
 
 const EXTRACT_PROMPT = `Extract structured data from this article. Return ONLY valid JSON with no markdown:
-{"headline":"Short headline max 15 words","date":"M/D/YYYY or null","location":"City, State or null","summary":"2-4 sentence factual summary","incidentType":"Comma-separated tags from: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Minor/Family, U.S. Citizen, Raid, Resistance, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, Climate/Environmental, Vigilante","country":"Country of origin or null"}`;
+{"headline":"Short headline max 15 words","date":"M/D/YYYY or null","location":"City, State or null","summary":"2-4 sentence factual summary","incidentType":"Comma-separated tags from: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention","country":"Country of origin or null"}
+Rules:
+- "Policy/Stats": for aggregate statistics, policy changes, enforcement trends without a specific named individual. Use INSTEAD of Detained/Disappearance/Detention for aggregate stories.
+- "Disappearance/Detention": ONLY when a specific named person is detained or disappeared.
+- Never use "illegal" to describe people. Use "undocumented".`;
 
 async function main() {
   const restored = await prisma.incident.findMany({
-    where: { url: { startsWith: "restored-" } },
-    select: { id: true, headline: true },
+    where: {
+      OR: [
+        { url: { startsWith: "restored-" } },
+        { url: { startsWith: "restored-" }, status: "FAILED" },
+      ],
+    },
+    select: { id: true, headline: true, url: true },
   });
   console.log(`Restored posts to fix: ${restored.length}\n`);
 
@@ -52,7 +61,8 @@ async function main() {
       }
 
       const best = articles[0];
-      const altUrls = articles.slice(1).map((a) => a.url);
+      // Preserve original URL + other Exa results as alt sources
+      const altUrls = [inc.url, ...articles.slice(1).map((a) => a.url)];
 
       // Fetch content for extraction
       let articleText = "";
