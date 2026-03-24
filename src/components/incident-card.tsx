@@ -856,7 +856,7 @@ export function IncidentCard({
                     }
                   } catch {}
                 }
-                if (events.length === 0) return null;
+                if (events.length <= 1) return null;
 
                 // Sort reverse chronological (most recent first)
                 events.sort((a, b) => {
@@ -868,9 +868,28 @@ export function IncidentCard({
                   return parseD(b.date).getTime() - parseD(a.date).getTime();
                 });
 
+                // Merge events on the same date
+                const mergedEvents: TimelineEvent[] = [];
+                const dateMap = new Map<string, TimelineEvent>();
+                for (const evt of events) {
+                  const existing = dateMap.get(evt.date);
+                  if (existing) {
+                    existing.event = existing.event + ". " + evt.event;
+                    if (evt.sources) {
+                      existing.sources = [...(existing.sources || []), ...evt.sources];
+                    } else if (evt.source) {
+                      existing.sources = [...(existing.sources || []), evt.source];
+                    }
+                  } else {
+                    const merged = { ...evt, sources: evt.sources ?? (evt.source ? [evt.source] : []) };
+                    dateMap.set(evt.date, merged);
+                    mergedEvents.push(merged);
+                  }
+                }
+
                 // Collect sources attributed to timeline events
                 const attributedSources = new Set<string>();
-                events.forEach((evt) => {
+                mergedEvents.forEach((evt) => {
                   if (evt.sources) evt.sources.forEach((s) => attributedSources.add(s));
                   if (evt.source) attributedSources.add(evt.source);
                 });
@@ -879,7 +898,7 @@ export function IncidentCard({
 
                 return (
                   <div className="border-l-2 border-warm-200 pl-4 space-y-3 ml-1">
-                    {events.map((evt, i) => {
+                    {mergedEvents.map((evt, i) => {
                       const displayDate = formatDate(evt.date) ?? evt.date;
                       const evtSources = evt.sources ?? (evt.source ? [evt.source] : []);
                       return (
