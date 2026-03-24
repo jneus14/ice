@@ -323,26 +323,20 @@ export function IncidentCard({
     setRegenerating(false);
   }
 
-  async function handleCombineInto(existingId: number, force = false) {
+  async function handleCombineInto(existingId: number) {
     setCombiningInto(existingId);
     setError(null);
     try {
       const res = await fetch(`/api/incidents/${incident.id}/combine`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-        body: JSON.stringify({ existingId, force }),
+        body: JSON.stringify({ existingId }),
       });
       if (res.ok) {
-        setPendingForcemerge(null);
         router.refresh();
       } else {
         const data = await res.json();
-        if (data.mismatch) {
-          setPendingForcemerge(existingId);
-          setError("Sources may describe different incidents.");
-        } else {
-          setError(data.error ?? "Merge failed");
-        }
+        setError(data.error ?? "Merge failed");
       }
     } catch {
       setError("Network error during merge");

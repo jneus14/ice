@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseAltSources } from "@/lib/sources";
-import { synthesizeIncidents, synthesizeIncidentsWithMismatchDetection, serializeTimeline } from "@/lib/extractor";
+import { synthesizeIncidents, serializeTimeline } from "@/lib/extractor";
 import { extractPersonName, nameMatchScore } from "@/lib/name-utils";
 
 const EDIT_PASSWORD = "acab";
@@ -276,36 +276,17 @@ export async function POST(
     date: i.date,
   }));
 
-  const forceMerge = body.force === true;
-  const result = await synthesizeIncidentsWithMismatchDetection(sources);
+  // User-initiated merges: always synthesize without mismatch blocking.
+  // The user explicitly chose to merge these, so skip the mismatch check.
+  const forced = await synthesizeIncidents(sources).catch(() => ({
+    headline: primary.headline || secondary.headline || "Untitled",
+    summary: [primary.summary, secondary.summary].filter(Boolean).join(" "),
+    timeline: [] as Array<{ date: string; event: string; source?: string }>,
+  }));
 
-  let headline: string;
-  let summary: string;
-  let timeline: Array<{ date: string; event: string; source?: string }>;
-
-  if (result.mismatch && !forceMerge) {
-    // Sources are about different incidents — ask user to confirm
-    return NextResponse.json(
-      { error: "Sources may describe different incidents. Merge anyway?", mismatch: true },
-      { status: 409 }
-    );
-  }
-
-  if (result.mismatch && forceMerge) {
-    // Force merge: synthesize without mismatch detection
-    const forced = await synthesizeIncidents(sources).catch(() => ({
-      headline: primary.headline || secondary.headline || "Untitled",
-      summary: [primary.summary, secondary.summary].filter(Boolean).join(" "),
-      timeline: [] as Array<{ date: string; event: string; source?: string }>,
-    }));
-    headline = forced.headline;
-    summary = forced.summary;
-    timeline = forced.timeline;
-  } else {
-    headline = result.headline;
-    summary = result.summary;
-    timeline = result.timeline;
-  }
+  const headline = forced.headline;
+  const summary = forced.summary;
+  const timeline = forced.timeline;
 
   // Use original date for sorting, not timeline dates
   const latestParsedDate = primary.parsedDate;

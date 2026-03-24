@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { scrapeUrl } from "@/lib/scraper";
-import { extractFromText, synthesizeIncidentsWithMismatchDetection, serializeTimeline } from "@/lib/extractor";
+import { extractFromText, synthesizeIncidents, serializeTimeline } from "@/lib/extractor";
 import { parseAltSources } from "@/lib/sources";
 import { parseIncidentDate } from "@/lib/geocode";
 
@@ -81,34 +81,12 @@ export async function POST(
       return NextResponse.json({ success: true, sourcesUsed: 1 });
     }
 
-    // Multiple sources: synthesize
-    const result = await synthesizeIncidentsWithMismatchDetection(sources);
-
-    // Use synthesis result even if mismatch (user explicitly asked to regenerate)
-    let headline: string;
-    let summary: string;
-    let timeline: Array<{ date: string; event: string; source?: string }> = [];
-
-    if (result.mismatch) {
-      // Mismatch but user wants regeneration — use the best single-source extraction
-      const best = sources[0];
-      headline = best.headline || incident.headline || "Untitled";
-      summary = sources.map((s) => s.summary).filter(Boolean).join(" ");
-      // Pick earliest date from sources
-      const dates = sources.map((s) => s.date).filter(Boolean) as string[];
-      const bestDate = dates[0] || incident.date;
-      const parsedDate = parseIncidentDate(bestDate);
-
-      await prisma.incident.update({
-        where: { id },
-        data: { headline, summary, date: bestDate, parsedDate },
-      });
-      return NextResponse.json({ success: true, sourcesUsed: sources.length, warning: "mismatch detected" });
-    }
-
-    headline = result.headline;
-    summary = result.summary;
-    timeline = result.timeline;
+    // Multiple sources: synthesize directly (no mismatch blocking)
+    const result = await synthesizeIncidents(sources).catch(() => ({
+      headline: sources[0].headline || incident.headline || "Untitled",
+      summary: sources.map((s) => s.summary).filter(Boolean).join(" "),
+      timeline: [] as Array<{ date: string; event: string; source?: string }>,
+    }));
 
     // Pick best date: prefer extracted dates, fall back to existing
     const extractedDates = sources.map((s) => s.date).filter(Boolean) as string[];
@@ -118,11 +96,11 @@ export async function POST(
     await prisma.incident.update({
       where: { id },
       data: {
-        headline,
-        summary,
+        headline: result.headline,
+        summary: result.summary,
         date: bestDate,
         parsedDate,
-        timeline: serializeTimeline(timeline),
+        timeline: serializeTimeline(result.timeline),
       },
     });
 

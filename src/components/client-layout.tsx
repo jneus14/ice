@@ -36,7 +36,7 @@ function FeedbackButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="px-2.5 py-1.5 text-xs sm:text-sm font-medium rounded-md border border-warm-300 text-warm-600 hover:bg-warm-50 transition-colors whitespace-nowrap"
+        className="px-2.5 py-1.5 text-xs sm:text-sm font-medium rounded-md border border-white/30 text-white/80 hover:bg-white/10 transition-colors whitespace-nowrap"
       >
         Feedback
       </button>
@@ -131,7 +131,7 @@ function SiteHeader() {
     <header className="relative bg-black text-white overflow-hidden">
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
         <a href="/" className="block group">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight font-serif bg-gradient-to-r from-white via-amber-100 to-orange-200 bg-clip-text text-transparent drop-shadow-sm leading-tight">
+          <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight font-serif bg-gradient-to-r from-white via-amber-100 to-orange-200 bg-clip-text text-transparent drop-shadow-sm leading-tight">
             {t.siteTitle}
           </h1>
           <p className="text-warm-400 group-hover:text-warm-300 mt-1.5 text-sm sm:text-base leading-relaxed max-w-3xl font-light tracking-wide transition-colors">
@@ -159,7 +159,7 @@ function Inner({ children }: { children: ReactNode }) {
   return (
     <>
       {/* Top bar */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-black border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-2">
           {/* Left: HUMSI logo */}
           <a
@@ -177,7 +177,7 @@ function Inner({ children }: { children: ReactNode }) {
               alt="HUMSI — Human Security Initiative"
               width={90}
               height={36}
-              className="object-contain"
+              className="object-contain brightness-200 invert"
               priority
             />
           </a>
@@ -185,7 +185,7 @@ function Inner({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
             <a
               href="/analytics"
-              className="px-2 sm:px-2.5 py-1.5 text-xs sm:text-sm font-medium rounded-md border border-warm-300 text-warm-600 hover:bg-warm-50 transition-colors whitespace-nowrap"
+              className="px-2 sm:px-2.5 py-1.5 text-xs sm:text-sm font-medium rounded-md border border-white/30 text-white/80 hover:bg-white/10 transition-colors whitespace-nowrap"
             >
               📊 <span className="hidden sm:inline">Analytics</span>
             </a>
