@@ -358,7 +358,7 @@ function PendingSection({
                     setPendingSelected(next);
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-3.5 h-3.5 rounded border-warm-400 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  className="w-5 h-5 rounded border-warm-400 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
                 />
               </div>
               <div className="flex-1 min-w-0">
