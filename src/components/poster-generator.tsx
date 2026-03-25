@@ -133,6 +133,7 @@ export function PosterGenerator({
   const [description, setDescription] = useState(() =>
     truncateDescription(summary)
   );
+  const [loadingDescription, setLoadingDescription] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(existingImageUrl ?? null);
   const [photoCredit, setPhotoCredit] = useState<string>("");
   const [photoCreditUrl, setPhotoCreditUrl] = useState<string>("");
@@ -144,7 +145,29 @@ export function PosterGenerator({
 
   // Photo positioning
   const [photoZoom, setPhotoZoom] = useState(100); // percentage
+  const [photoOffsetX, setPhotoOffsetX] = useState(50); // percentage (50 = center)
   const [photoOffsetY, setPhotoOffsetY] = useState(50); // percentage (50 = center)
+
+  // Fetch AI-generated poster description with humanizing details
+  async function fetchPosterDescription() {
+    setLoadingDescription(true);
+    try {
+      const res = await fetch(`/api/incidents/${incidentId}/poster-description`, {
+        headers: { "x-edit-password": "acab" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.description) setDescription(data.description);
+      }
+    } catch {
+      // Keep truncated summary as fallback
+    }
+    setLoadingDescription(false);
+  }
+
+  useEffect(() => {
+    fetchPosterDescription();
+  }, [incidentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch photos from linked articles
   useEffect(() => {
@@ -257,7 +280,16 @@ export function PosterGenerator({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Description</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-500">Description</label>
+                <button
+                  onClick={() => fetchPosterDescription()}
+                  disabled={loadingDescription}
+                  className="text-[10px] text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+                >
+                  {loadingDescription ? "Generating..." : "↻ Regenerate from sources"}
+                </button>
+              </div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -337,7 +369,7 @@ export function PosterGenerator({
                   <span className="text-xs text-gray-400 w-10 text-right">{photoZoom}%</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="text-xs font-medium text-gray-500 w-16 shrink-0">Position</label>
+                  <label className="text-xs font-medium text-gray-500 w-16 shrink-0">Up/Down</label>
                   <input
                     type="range"
                     min={0}
@@ -348,6 +380,20 @@ export function PosterGenerator({
                   />
                   <span className="text-xs text-gray-400 w-10 text-right">
                     {photoOffsetY < 33 ? "Top" : photoOffsetY > 66 ? "Bottom" : "Center"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-500 w-16 shrink-0">Left/Right</label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={photoOffsetX}
+                    onChange={(e) => setPhotoOffsetX(Number(e.target.value))}
+                    className="flex-1 h-1.5 accent-orange-500"
+                  />
+                  <span className="text-xs text-gray-400 w-10 text-right">
+                    {photoOffsetX < 33 ? "Left" : photoOffsetX > 66 ? "Right" : "Center"}
                   </span>
                 </div>
               </div>
@@ -442,9 +488,9 @@ export function PosterGenerator({
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
-                    objectPosition: `center ${photoOffsetY}%`,
+                    objectPosition: `${photoOffsetX}% ${photoOffsetY}%`,
                     transform: `scale(${photoZoom / 100})`,
-                    transformOrigin: `center ${photoOffsetY}%`,
+                    transformOrigin: `${photoOffsetX}% ${photoOffsetY}%`,
                   }}
                   crossOrigin="anonymous"
                 />
