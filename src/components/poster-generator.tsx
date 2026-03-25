@@ -494,19 +494,10 @@ export function PosterGenerator({
                 {photoCredit && (
                   <>
                     {" · Photo: "}
-                    {photoCreditUrl ? (
-                      <span style={{ textDecoration: "underline" }}>{photoCredit}</span>
-                    ) : (
-                      photoCredit
-                    )}
+                    {photoCredit}
                   </>
                 )}
               </div>
-              {photoCreditUrl && (
-                <div style={{ opacity: 0.4, fontSize: "8px", marginTop: "2px" }}>
-                  {photoCreditUrl}
-                </div>
-              )}
             </div>
           </div>
         </div>
