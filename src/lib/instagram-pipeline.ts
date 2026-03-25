@@ -104,27 +104,6 @@ async function scrapeInstagramEmbed(url: string): Promise<EmbedData | null> {
       }
     }
 
-    // Fallback: try Instagram oEmbed API for metadata
-    if (!postDate) {
-      try {
-        const oembedUrl = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(url)}&access_token=IGQVJV`;
-        // Try the public oEmbed endpoint (no auth needed for basic metadata)
-        const oembedRes = await fetch(
-          `https://api.instagram.com/oembed/?url=${encodeURIComponent(url)}`,
-          { signal: AbortSignal.timeout(5000) }
-        );
-        if (oembedRes.ok) {
-          const oembed = await oembedRes.json();
-          // oEmbed sometimes includes title with date context
-          if (oembed.title && !caption) {
-            caption = oembed.title;
-          }
-        }
-      } catch {
-        // oEmbed unavailable, continue
-      }
-    }
-
     return { caption, imageUrl, accountName, postDate };
   } catch {
     return null;
@@ -432,16 +411,21 @@ export async function processInstagramPipeline(incidentId: number): Promise<void
       }
     }
 
-    // Use best available date: existing > extracted (often from news article) > embed post date
-    // Prefer extracted.date since it usually comes from a real news article with a publication date
+    // Use best available date: existing > extracted (from news article) > embed post date > news publishedDate > today
     const finalDate = incident.date ?? extracted.date ?? embed?.postDate ?? null;
-    // If we still have no date and we have news articles, try their publishedDate directly
-    const effectiveDate = finalDate ?? (articles.length > 0 && articles[0].publishedDate
+    // If we still have no date, try the news article's publishedDate
+    const fromArticle = !finalDate && articles.length > 0 && articles[0].publishedDate
       ? (() => {
           const d = new Date(articles[0].publishedDate);
           return !isNaN(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}` : null;
         })()
-      : null);
+      : null;
+    // Last resort: use today's date (user is sharing it now, so it's recent)
+    const today = (() => {
+      const d = new Date();
+      return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+    })();
+    const effectiveDate = finalDate ?? fromArticle ?? today;
     const parsedDate = parseIncidentDate(effectiveDate);
 
     // ── Step 8: Save ───────────────────────────────────────────────────────
