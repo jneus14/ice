@@ -1219,11 +1219,12 @@ export function IncidentCard({
                   )}
                 </div>
               )}
-              {/* Public poster button — only for stories naming specific individuals */}
-              {!editMode && (() => {
+              {/* Poster button — public or edit mode toggle */}
+              {(() => {
                 const posterTags = new Set(["Disappearance/Detention", "Deported", "3rd Country Deportation"]);
                 const hasPosterTag = rawTags.some((t) => posterTags.has(t));
                 const policyTag = rawTags.includes("Policy/Stats");
+                const noPoster = rawTags.includes("no-poster");
                 if (!hasPosterTag || policyTag) return null;
                 // Check headline AND first sentence of summary for a specific person's name
                 const textToCheck = (incident.headline || "") + " " + (incident.summary || "").split(".").slice(0, 2).join(".");
@@ -1232,6 +1233,36 @@ export function IncidentCard({
                 const matches = textToCheck.match(new RegExp(namePattern, "g")) || [];
                 const hasName = matches.some(m => !excludeWords.test(m));
                 if (!hasName) return null;
+
+                if (editMode) {
+                  return (
+                    <div className="mt-2 flex items-center gap-2">
+                      {!noPoster && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowPoster(true); }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                        >
+                          <span>📋</span> Generate Poster
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (noPoster) { removeTag("no-poster"); } else { addTag("no-poster"); }
+                        }}
+                        className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border transition-colors ${
+                          noPoster
+                            ? "border-red-300 text-red-600 bg-red-50 hover:bg-red-100"
+                            : "border-warm-300 text-warm-500 hover:bg-warm-50"
+                        }`}
+                      >
+                        {noPoster ? "🚫 Poster disabled — click to re-enable" : "🚫 Disable poster"}
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (noPoster) return null;
                 return (
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowPoster(true); }}
