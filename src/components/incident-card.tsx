@@ -1219,6 +1219,21 @@ export function IncidentCard({
                   )}
                 </div>
               )}
+              {/* Public poster button — only for specific person stories */}
+              {!editMode && (() => {
+                const posterTags = new Set(["Disappearance/Detention", "Deported", "3rd Country Deportation"]);
+                const hasPosterTag = rawTags.some((t) => posterTags.has(t));
+                const policyTag = rawTags.includes("Policy/Stats");
+                if (!hasPosterTag || policyTag) return null;
+                return (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowPoster(true); }}
+                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                  >
+                    <span>📋</span> Generate Missing Poster
+                  </button>
+                );
+              })()}
               {/* Related stories (collapsed by default) */}
               {relatedStories && relatedStories.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-warm-100">
