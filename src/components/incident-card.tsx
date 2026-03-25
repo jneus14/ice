@@ -201,9 +201,6 @@ export function IncidentCard({
   const [inlineValue, setInlineValue] = useState("");
   const [inlineSaving, setInlineSaving] = useState(false);
   const [newSourceUrl, setNewSourceUrl] = useState("");
-  const [relatedStories, setRelatedStories] = useState<Array<{ id: number; headline: string; date: string | null; location: string | null }> | null>(null);
-  const [loadingRelated, setLoadingRelated] = useState(false);
-  const [relatedExpanded, setRelatedExpanded] = useState(false);
 
   const isPending = editMode && incident.approved === false;
 
@@ -522,15 +519,6 @@ export function IncidentCard({
   function handleExpand() {
     const next = !expanded;
     setExpanded(next);
-    // Lazily fetch related stories
-    if (next && relatedStories === null && !loadingRelated) {
-      setLoadingRelated(true);
-      fetch(`/api/incidents/${incident.id}/related`)
-        .then((r) => r.json())
-        .then((d) => setRelatedStories(d.related ?? []))
-        .catch(() => setRelatedStories([]))
-        .finally(() => setLoadingRelated(false));
-    }
     // Lazily translate summary when expanding in Spanish mode
     if (next && translateSummary && incident.summary && !translatedSummary && !translatingSum) {
       const cacheKey = `summary:es:${incident.id}`;
@@ -1272,47 +1260,6 @@ export function IncidentCard({
                   </button>
                 );
               })()}
-              {/* Related stories (collapsed by default) */}
-              {relatedStories && relatedStories.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-warm-100">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setRelatedExpanded(!relatedExpanded); }}
-                    className="flex items-center gap-2 w-full text-left group/related"
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-warm-400">Related stories</p>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warm-200 text-warm-500">
-                      {relatedStories.length}
-                    </span>
-                    <svg
-                      className={`w-3 h-3 text-warm-400 transition-transform duration-200 ${relatedExpanded ? "rotate-180" : ""}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2.5}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {relatedExpanded && (
-                    <div className="space-y-1 mt-2">
-                      {relatedStories.map((rs) => (
-                        <a
-                          key={rs.id}
-                          href={`/?q=${encodeURIComponent(rs.headline?.split(" ").slice(0, 4).join(" ") ?? "")}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="block text-sm text-warm-600 hover:text-warm-900 hover:underline transition-colors"
-                        >
-                          {rs.headline}
-                          {rs.date && <span className="text-warm-400 text-xs ml-1.5">· {rs.date}</span>}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {loadingRelated && (
-                <p className="text-xs text-warm-400 italic mt-2">Loading related stories…</p>
-              )}
             </div>
           )}
         </div>
