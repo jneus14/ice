@@ -419,6 +419,55 @@ export function IncidentCard({
     setRegenerating(false);
   }
 
+  const [generatingTimeline, setGeneratingTimeline] = useState(false);
+
+  async function handleGenerateTimeline() {
+    setGeneratingTimeline(true);
+    setError(null);
+    try {
+      // Regenerate will produce a timeline from all sources
+      const res = await fetch(`/api/incidents/${incident.id}/regenerate`, {
+        method: "POST",
+        headers: { "x-edit-password": "acab" },
+      });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const data = await res.json();
+        setError(data.error ?? "Failed to generate timeline");
+      }
+    } catch {
+      setError("Network error");
+    }
+    setGeneratingTimeline(false);
+  }
+
+  async function handleRemoveTimeline() {
+    setError(null);
+    try {
+      const res = await fetch(`/api/incidents/${incident.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+        body: JSON.stringify({
+          headline: incident.headline,
+          date: incident.date,
+          location: incident.location,
+          summary: incident.summary,
+          incidentType: incident.incidentType,
+          country: incident.country,
+          timeline: null,
+        }),
+      });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        setError("Failed to remove timeline");
+      }
+    } catch {
+      setError("Network error");
+    }
+  }
+
   async function handleCombineInto(existingId: number) {
     setCombiningInto(existingId);
     setError(null);
@@ -1297,6 +1346,22 @@ export function IncidentCard({
           >
             📋 Poster
           </button>
+          {incident.timeline ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleRemoveTimeline(); }}
+              className="px-3 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors"
+            >
+              ✕ Timeline
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleGenerateTimeline(); }}
+              disabled={generatingTimeline}
+              className="px-3 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60"
+            >
+              {generatingTimeline ? "Generating…" : "+ Timeline"}
+            </button>
+          )}
           {!confirmDelete ? (
             <button
               onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}

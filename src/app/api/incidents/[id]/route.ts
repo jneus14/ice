@@ -22,7 +22,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { headline, date, location, summary, incidentType, country, url, altSources } = body;
+  const { headline, date, location, summary, incidentType, country, url, altSources, timeline } = body;
 
   // Parse date string to a Date object for parsedDate
   let parsedDate: Date | null = null;
@@ -43,6 +43,7 @@ export async function PUT(
       country: country?.trim() || null,
       ...(url?.trim() ? { url: url.trim() } : {}),
       altSources: altSources ?? null,
+      ...(timeline !== undefined ? { timeline: timeline } : {}),
     },
   });
 
