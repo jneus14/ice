@@ -191,9 +191,11 @@ export function IncidentCard({
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [localTags, setLocalTags] = useState<string | null>(null); // track tag edits locally
   const [splitting, setSplitting] = useState(false);
-  const [inlineEditing, setInlineEditing] = useState<"headline" | "summary" | null>(null);
+  const [cardEditing, setCardEditing] = useState(false);
+  const [inlineEditing, setInlineEditing] = useState<"headline" | "summary" | "date" | "location" | "country" | null>(null);
   const [inlineValue, setInlineValue] = useState("");
   const [inlineSaving, setInlineSaving] = useState(false);
+  const [newSourceUrl, setNewSourceUrl] = useState("");
   const [relatedStories, setRelatedStories] = useState<Array<{ id: number; headline: string; date: string | null; location: string | null }> | null>(null);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [relatedExpanded, setRelatedExpanded] = useState(false);
@@ -227,8 +229,15 @@ export function IncidentCard({
     setCombining(false);
   }
 
-  function startInlineEdit(field: "headline" | "summary") {
-    setInlineValue(field === "headline" ? (incident.headline ?? "") : (incident.summary ?? ""));
+  function startInlineEdit(field: "headline" | "summary" | "date" | "location" | "country") {
+    const vals: Record<string, string> = {
+      headline: incident.headline ?? "",
+      summary: incident.summary ?? "",
+      date: incident.date ?? "",
+      location: incident.location ?? "",
+      country: incident.country ?? "",
+    };
+    setInlineValue(vals[field] ?? "");
     setInlineEditing(field);
   }
 
@@ -275,6 +284,50 @@ export function IncidentCard({
         headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
         body: JSON.stringify({ incidentType: newValue }),
       });
+    } catch {}
+  }
+
+  async function removeSource(urlToRemove: string) {
+    const currentAlt = parseAltSources(incident.altSources);
+    if (urlToRemove === incident.url) {
+      // If removing primary URL, promote first alt source
+      if (currentAlt.length === 0) return;
+      const newPrimary = currentAlt[0];
+      const newAlt = currentAlt.slice(1);
+      try {
+        await fetch(`/api/incidents/${incident.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+          body: JSON.stringify({ url: newPrimary, altSources: newAlt.length > 0 ? JSON.stringify(newAlt) : null }),
+        });
+        router.refresh();
+      } catch {}
+    } else {
+      const newAlt = currentAlt.filter(u => u !== urlToRemove);
+      try {
+        await fetch(`/api/incidents/${incident.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+          body: JSON.stringify({ altSources: newAlt.length > 0 ? JSON.stringify(newAlt) : null }),
+        });
+        router.refresh();
+      } catch {}
+    }
+  }
+
+  async function addSource(url: string) {
+    if (!url.trim()) return;
+    const currentAlt = parseAltSources(incident.altSources);
+    if (url === incident.url || currentAlt.includes(url)) return;
+    const newAlt = [...currentAlt, url.trim()];
+    try {
+      await fetch(`/api/incidents/${incident.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+        body: JSON.stringify({ altSources: JSON.stringify(newAlt) }),
+      });
+      setNewSourceUrl("");
+      router.refresh();
     } catch {}
   }
 
@@ -767,35 +820,104 @@ export function IncidentCard({
               {sourcesExpanded && allSources.length > 1 && (
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                   {allSources.filter((s) => s !== primarySource).map((src) => (
-                    <a
-                      key={src}
-                      href={src}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-[0.72rem] font-medium text-orange-500 hover:text-orange-700 hover:underline transition-colors"
-                    >
-                      {getSourceName(src)}
-                    </a>
+                    <span key={src} className="inline-flex items-center gap-0.5">
+                      <a
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[0.72rem] font-medium text-orange-500 hover:text-orange-700 hover:underline transition-colors"
+                      >
+                        {getSourceName(src)}
+                      </a>
+                      {cardEditing && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeSource(src); }}
+                          className="text-red-400 hover:text-red-600 text-[10px] ml-0.5"
+                          title="Remove source"
+                        >✕</button>
+                      )}
+                    </span>
                   ))}
+                </div>
+              )}
+              {cardEditing && (
+                <div className="flex items-center gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    value={newSourceUrl}
+                    onChange={(e) => setNewSourceUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { addSource(newSourceUrl); } }}
+                    placeholder="Add source URL..."
+                    className="flex-1 max-w-xs px-2 py-1 text-xs border border-warm-300 rounded focus:outline-none focus:border-blue-400"
+                  />
+                  <button
+                    onClick={() => addSource(newSourceUrl)}
+                    disabled={!newSourceUrl.trim()}
+                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40"
+                  >Add</button>
                 </div>
               )}
 
               {/* Date · Location · Country */}
-              {hasMeta && (
+              {(hasMeta || cardEditing) && (
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8rem] text-warm-400">
-                  {incident.date && (
-                    <span className="font-medium text-warm-500">{formatDate(incident.date)}</span>
+                  {cardEditing && inlineEditing === "date" ? (
+                    <span className="inline-flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                      <input type="text" value={inlineValue} onChange={(e) => setInlineValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveInlineEdit(); if (e.key === "Escape") setInlineEditing(null); }}
+                        autoFocus placeholder="M/D/YYYY"
+                        className="w-24 px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:border-blue-500" />
+                      <button onClick={saveInlineEdit} className="text-[10px] text-blue-600 hover:underline">{inlineSaving ? "…" : "Save"}</button>
+                      <button onClick={() => setInlineEditing(null)} className="text-[10px] text-warm-400 hover:text-warm-700">✕</button>
+                    </span>
+                  ) : (
+                    <span
+                      className={`font-medium text-warm-500 ${cardEditing ? "cursor-text hover:bg-blue-50 rounded px-0.5" : ""}`}
+                      onDoubleClick={cardEditing ? (e) => { e.stopPropagation(); startInlineEdit("date"); } : undefined}
+                    >
+                      {incident.date ? formatDate(incident.date) : (cardEditing ? "Add date" : "")}
+                    </span>
                   )}
-                  {incident.date && incident.location && (
+                  {(incident.date || cardEditing) && (incident.location || cardEditing) && (
                     <span aria-hidden className="text-warm-300">·</span>
                   )}
-                  {incident.location && <span>{incident.location}</span>}
-                  {incident.country && (
-                    <>
-                      <span aria-hidden className="text-warm-300">·</span>
-                      <span>{incident.country}</span>
-                    </>
+                  {cardEditing && inlineEditing === "location" ? (
+                    <span className="inline-flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                      <input type="text" value={inlineValue} onChange={(e) => setInlineValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveInlineEdit(); if (e.key === "Escape") setInlineEditing(null); }}
+                        autoFocus placeholder="City, ST"
+                        className="w-28 px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:border-blue-500" />
+                      <button onClick={saveInlineEdit} className="text-[10px] text-blue-600 hover:underline">{inlineSaving ? "…" : "Save"}</button>
+                      <button onClick={() => setInlineEditing(null)} className="text-[10px] text-warm-400 hover:text-warm-700">✕</button>
+                    </span>
+                  ) : (
+                    <span
+                      className={cardEditing ? "cursor-text hover:bg-blue-50 rounded px-0.5" : ""}
+                      onDoubleClick={cardEditing ? (e) => { e.stopPropagation(); startInlineEdit("location"); } : undefined}
+                    >
+                      {incident.location || (cardEditing ? "Add location" : "")}
+                    </span>
+                  )}
+                  {(incident.location || cardEditing) && (
+                    <span aria-hidden className="text-warm-300">·</span>
+                  )}
+                  {cardEditing && inlineEditing === "country" ? (
+                    <span className="inline-flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                      <input type="text" value={inlineValue} onChange={(e) => setInlineValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveInlineEdit(); if (e.key === "Escape") setInlineEditing(null); }}
+                        autoFocus placeholder="Country"
+                        className="w-24 px-1 py-0.5 text-xs border border-blue-300 rounded focus:outline-none focus:border-blue-500" />
+                      <button onClick={saveInlineEdit} className="text-[10px] text-blue-600 hover:underline">{inlineSaving ? "…" : "Save"}</button>
+                      <button onClick={() => setInlineEditing(null)} className="text-[10px] text-warm-400 hover:text-warm-700">✕</button>
+                    </span>
+                  ) : (
+                    <span
+                      className={cardEditing ? "cursor-text hover:bg-blue-50 rounded px-0.5" : ""}
+                      onDoubleClick={cardEditing ? (e) => { e.stopPropagation(); startInlineEdit("country"); } : undefined}
+                    >
+                      {incident.country || (cardEditing ? "Add country" : "")}
+                    </span>
                   )}
                 </div>
               )}
@@ -1106,7 +1228,7 @@ export function IncidentCard({
         {editMode && (
           <div className="flex items-center pt-1 shrink-0">
             <button
-              onClick={(e) => { e.stopPropagation(); startEditing(); }}
+              onClick={(e) => { e.stopPropagation(); setCardEditing(!cardEditing); setExpanded(true); }}
               title="Edit incident"
               className="p-1.5 rounded-md text-warm-300 hover:text-amber-600 hover:bg-amber-50 transition-colors"
             >
@@ -1118,13 +1240,13 @@ export function IncidentCard({
         )}
       </div>
       {/* Edit mode actions */}
-      {editMode && (error || successMsg) && (
+      {cardEditing && (error || successMsg) && (
         <div className="mt-2 ml-0 flex items-center gap-2">
           <p className={`text-xs ${error ? "text-red-500" : "text-green-600"}`}>{error || successMsg}</p>
         </div>
       )}
-      {editMode && (
-        <div className="mt-2 flex items-center gap-2 ml-0">
+      {cardEditing && (
+        <div className="mt-2 flex items-center gap-2 ml-0 flex-wrap">
           {isPending && (
             <button
               onClick={(e) => { e.stopPropagation(); handleApprove(); }}
