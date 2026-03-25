@@ -105,7 +105,17 @@ export async function GET(
             lower.includes("icon") ||
             lower.includes("placeholder") ||
             lower.includes("default-share") ||
-            lower.includes("site-image")
+            lower.includes("site-image") ||
+            lower.includes("homeland") ||
+            lower.includes("dhs-seal") ||
+            lower.includes("department-of") ||
+            lower.includes("seal_of") ||
+            lower.includes("government") ||
+            lower.includes("badge") ||
+            lower.includes("generic") ||
+            lower.includes("stock-photo") ||
+            lower.includes("shutterstock") ||
+            lower.includes("getty")
           ) {
             continue;
           }
@@ -189,7 +199,7 @@ export async function GET(
                     if (ogMatch?.[1]) {
                       const imgUrl = ogMatch[1];
                       const lower = imgUrl.toLowerCase();
-                      if (lower.includes("logo") || lower.includes("favicon") || lower.includes("icon") || lower.includes("placeholder") || lower.includes("default")) continue;
+                      if (lower.includes("logo") || lower.includes("favicon") || lower.includes("icon") || lower.includes("placeholder") || lower.includes("default") || lower.includes("homeland") || lower.includes("dhs") || lower.includes("seal") || lower.includes("government") || lower.includes("badge") || lower.includes("stock") || lower.includes("getty") || lower.includes("shutterstock")) continue;
                       if (!results.some((x) => x.imageUrl === imgUrl)) {
                         results.push({ imageUrl: imgUrl, source: getDomain(r.url) });
                       }

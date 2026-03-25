@@ -61,14 +61,30 @@ function extractPersonName(headline: string | null, summary: string | null): str
 
 function truncateDescription(summary: string | null, maxChars = 300): string {
   if (!summary) return "";
-  // Split into sentences
-  const sentences = summary.match(/[^.!?]+[.!?]+/g) ?? [summary];
 
-  // Prioritize sentences with humanizing info (family, career, hobbies, age, community)
-  const humanizingPatterns = /\b(father|mother|parent|child|children|daughter|son|family|husband|wife|spouse|married|baby|pregnant|years? old|age \d|lived|resident|worked|worker|job|career|doctor|teacher|nurse|cook|chef|student|school|church|community|volunteer|neighbor|friend|loved)\b/i;
+  // Better sentence splitting that handles abbreviations (U.S., Dr., etc.)
+  // Replace common abbreviations with placeholders, split, then restore
+  let clean = summary
+    .replace(/U\.\s*S\./g, "U·S·")
+    .replace(/Dr\./g, "Dr·")
+    .replace(/Mr\./g, "Mr·")
+    .replace(/Mrs\./g, "Mrs·")
+    .replace(/Jr\./g, "Jr·")
+    .replace(/Sr\./g, "Sr·")
+    .replace(/St\./g, "St·")
+    .replace(/vs\./g, "vs·")
+    .replace(/etc\./g, "etc·")
+    .replace(/i\.e\./g, "i·e·")
+    .replace(/e\.g\./g, "e·g·");
+
+  const rawSentences = clean.match(/[^.!?]+[.!?]+/g) ?? [clean];
+  const sentences = rawSentences.map(s => s.replace(/·/g, ".").trim());
+
+  // Prioritize sentences with humanizing info
+  const humanizingPatterns = /\b(father|mother|parent|child|children|daughter|son|family|husband|wife|spouse|married|baby|pregnant|years? old|age \d|lived|resident|worked|worker|job|career|doctor|teacher|nurse|cook|chef|student|school|church|community|volunteer|neighbor|friend|loved|DACA|citizen|green card|visa)\b/i;
 
   const scored = sentences.map((s, i) => ({
-    text: s.trim(),
+    text: s,
     score: humanizingPatterns.test(s) ? 10 : 0,
     order: i,
   }));
@@ -77,35 +93,28 @@ function truncateDescription(summary: string | null, maxChars = 300): string {
   scored.sort((a, b) => b.score - a.score || a.order - b.order);
 
   let result = "";
-  const used = new Set<number>();
-
   for (const s of scored) {
     if (result.length + s.text.length + 1 > maxChars) continue;
-    used.add(s.order);
     result += (result ? " " : "") + s.text;
   }
 
   // If we got nothing useful, just take sentences in order
   if (!result) {
     for (const s of sentences) {
-      const trimmed = s.trim();
-      if (result.length + trimmed.length + 1 > maxChars) break;
-      result += (result ? " " : "") + trimmed;
+      if (result.length + s.length + 1 > maxChars) break;
+      result += (result ? " " : "") + s;
     }
   }
 
   // Never end with incomplete sentence
   if (result && !result.match(/[.!?]$/)) {
-    const lastPeriod = result.lastIndexOf(".");
-    const lastQuestion = result.lastIndexOf("?");
-    const lastExcl = result.lastIndexOf("!");
-    const lastEnd = Math.max(lastPeriod, lastQuestion, lastExcl);
+    const lastEnd = Math.max(result.lastIndexOf("."), result.lastIndexOf("?"), result.lastIndexOf("!"));
     if (lastEnd > result.length * 0.4) {
       result = result.slice(0, lastEnd + 1);
     }
   }
 
-  return result || summary.split(".")[0] + ".";
+  return result || sentences[0] || summary.slice(0, maxChars);
 }
 
 export function PosterGenerator({
