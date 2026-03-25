@@ -189,6 +189,7 @@ export function IncidentCard({
   const [keywordSearching, setKeywordSearching] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const [localTags, setLocalTags] = useState<string | null>(null); // track tag edits locally
   const [splitting, setSplitting] = useState(false);
   const [inlineEditing, setInlineEditing] = useState<"headline" | "summary" | null>(null);
   const [inlineValue, setInlineValue] = useState("");
@@ -251,29 +252,29 @@ export function IncidentCard({
   }
 
   async function removeTag(tag: string) {
-    const currentTags = (incident.incidentType ?? "").split(",").map(t => t.trim()).filter(Boolean);
-    const newTags = currentTags.filter(t => t !== tag);
+    const currentTags = effectiveTags.filter(t => t !== tag);
+    const newValue = currentTags.join(", ");
+    setLocalTags(newValue);
     try {
       await fetch(`/api/incidents/${incident.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-        body: JSON.stringify({ incidentType: newTags.join(", ") }),
+        body: JSON.stringify({ incidentType: newValue }),
       });
-      router.refresh();
     } catch {}
   }
 
   async function addTag(tag: string) {
-    const currentTags = (incident.incidentType ?? "").split(",").map(t => t.trim()).filter(Boolean);
-    if (currentTags.includes(tag)) return;
-    currentTags.push(tag);
+    if (effectiveTags.includes(tag)) return;
+    const newTags = [...effectiveTags, tag];
+    const newValue = newTags.join(", ");
+    setLocalTags(newValue);
     try {
       await fetch(`/api/incidents/${incident.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-        body: JSON.stringify({ incidentType: currentTags.join(", ") }),
+        body: JSON.stringify({ incidentType: newValue }),
       });
-      router.refresh();
     } catch {}
   }
 
@@ -394,12 +395,14 @@ export function IncidentCard({
     altSources: altSourcesList.join("\n"),
   });
 
-  const rawTags = [...new Set(
-    incident.incidentType
+  const tagSource = localTags !== null ? localTags : incident.incidentType;
+  const effectiveTags = [...new Set(
+    tagSource
       ?.split(",")
       .map((t) => t.trim())
       .filter(Boolean) ?? []
   )];
+  const rawTags = effectiveTags;
 
   const incidentTypeTags = rawTags.filter((t) => incidentTypeSet.has(t));
   const personImpactedTags = rawTags.filter((t) => personImpactedSet.has(t));
@@ -1016,10 +1019,9 @@ export function IncidentCard({
                         className="w-20 px-2 py-0.5 text-[0.7rem] rounded-full border border-dashed border-warm-300 text-warm-500 placeholder:text-warm-300 focus:outline-none focus:border-blue-400 focus:w-36 transition-all"
                       />
                       {tagDropdownOpen && tagInput.length > 0 && (() => {
-                        const currentTags = (incident.incidentType ?? "").split(",").map(t => t.trim()).filter(Boolean);
                         const allTags = [...INCIDENT_TYPE_TAGS, ...PERSON_IMPACTED_TAGS];
                         const filtered = allTags.filter(t =>
-                          !currentTags.includes(t.value) &&
+                          !effectiveTags.includes(t.value) &&
                           (t.value.toLowerCase().includes(tagInput.toLowerCase()) || t.label.toLowerCase().includes(tagInput.toLowerCase()))
                         );
                         if (filtered.length === 0) return null;
