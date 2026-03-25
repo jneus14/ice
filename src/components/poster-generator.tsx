@@ -20,7 +20,6 @@ type PhotoOption = {
 
 function extractPersonName(headline: string | null, summary: string | null): string {
   const text = `${headline ?? ""} ${summary ?? ""}`;
-  // Look for common patterns: "Name, a/an..." or "Name was..." or "Name, who..."
   const patterns = [
     /([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+(?:de\s+la\s+|de\s+|del\s+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,3})(?:\s*,\s*(?:a |an |who |was |is ))/,
     /(?:^|\.\s+)([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+(?:de\s+la\s+|de\s+|del\s+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,3})\s+was\s/,
@@ -30,7 +29,6 @@ function extractPersonName(headline: string | null, summary: string | null): str
   for (const p of patterns) {
     const m = text.match(p);
     if (m?.[1]) {
-      // Filter out common non-name words
       const name = m[1];
       const stopWords = new Set([
         "The", "This", "That", "These", "Those", "Their", "According",
@@ -45,14 +43,53 @@ function extractPersonName(headline: string | null, summary: string | null): str
   return "Community Member";
 }
 
-function truncateDescription(summary: string | null, maxChars = 280): string {
+function truncateDescription(summary: string | null, maxChars = 300): string {
   if (!summary) return "";
-  if (summary.length <= maxChars) return summary;
-  // Cut at last sentence boundary before maxChars
-  const truncated = summary.slice(0, maxChars);
-  const lastPeriod = truncated.lastIndexOf(".");
-  if (lastPeriod > maxChars * 0.5) return truncated.slice(0, lastPeriod + 1);
-  return truncated + "…";
+  // Split into sentences
+  const sentences = summary.match(/[^.!?]+[.!?]+/g) ?? [summary];
+
+  // Prioritize sentences with humanizing info (family, career, hobbies, age, community)
+  const humanizingPatterns = /\b(father|mother|parent|child|children|daughter|son|family|husband|wife|spouse|married|baby|pregnant|years? old|age \d|lived|resident|worked|worker|job|career|doctor|teacher|nurse|cook|chef|student|school|church|community|volunteer|neighbor|friend|loved)\b/i;
+
+  const scored = sentences.map((s, i) => ({
+    text: s.trim(),
+    score: humanizingPatterns.test(s) ? 10 : 0,
+    order: i,
+  }));
+
+  // Take humanizing sentences first, then in order, up to maxChars
+  scored.sort((a, b) => b.score - a.score || a.order - b.order);
+
+  let result = "";
+  const used = new Set<number>();
+
+  for (const s of scored) {
+    if (result.length + s.text.length + 1 > maxChars) continue;
+    used.add(s.order);
+    result += (result ? " " : "") + s.text;
+  }
+
+  // If we got nothing useful, just take sentences in order
+  if (!result) {
+    for (const s of sentences) {
+      const trimmed = s.trim();
+      if (result.length + trimmed.length + 1 > maxChars) break;
+      result += (result ? " " : "") + trimmed;
+    }
+  }
+
+  // Never end with incomplete sentence
+  if (result && !result.match(/[.!?]$/)) {
+    const lastPeriod = result.lastIndexOf(".");
+    const lastQuestion = result.lastIndexOf("?");
+    const lastExcl = result.lastIndexOf("!");
+    const lastEnd = Math.max(lastPeriod, lastQuestion, lastExcl);
+    if (lastEnd > result.length * 0.4) {
+      result = result.slice(0, lastEnd + 1);
+    }
+  }
+
+  return result || summary.split(".")[0] + ".";
 }
 
 export function PosterGenerator({
@@ -73,11 +110,16 @@ export function PosterGenerator({
   );
   const [photoUrl, setPhotoUrl] = useState<string | null>(existingImageUrl ?? null);
   const [photoCredit, setPhotoCredit] = useState<string>("");
+  const [photoCreditUrl, setPhotoCreditUrl] = useState<string>("");
   const [allPhotos, setAllPhotos] = useState<PhotoOption[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [customUpload, setCustomUpload] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Photo positioning
+  const [photoZoom, setPhotoZoom] = useState(100); // percentage
+  const [photoOffsetY, setPhotoOffsetY] = useState(50); // percentage (50 = center)
 
   // Fetch photos from linked articles
   useEffect(() => {
@@ -93,12 +135,18 @@ export function PosterGenerator({
             if (!photoUrl && data.imageUrl) {
               setPhotoUrl(data.imageUrl);
               setPhotoCredit(data.source);
+              // Build credit URL from the source article
+              const sourcePhoto = data.allPhotos.find((p: PhotoOption) => p.imageUrl === data.imageUrl);
+              if (sourcePhoto) {
+                setPhotoCreditUrl(`https://${sourcePhoto.source}`);
+              }
             }
           } else if (data.imageUrl) {
             setAllPhotos([{ imageUrl: data.imageUrl, source: data.source }]);
             if (!photoUrl) {
               setPhotoUrl(data.imageUrl);
               setPhotoCredit(data.source);
+              setPhotoCreditUrl(`https://${data.source}`);
             }
           }
         }
@@ -119,9 +167,20 @@ export function PosterGenerator({
       const dataUrl = reader.result as string;
       setCustomUpload(dataUrl);
       setPhotoUrl(dataUrl);
-      setPhotoCredit("Uploaded photo");
+      setPhotoCredit("");
+      setPhotoCreditUrl("");
+      setPhotoZoom(100);
+      setPhotoOffsetY(50);
     };
     reader.readAsDataURL(file);
+  }
+
+  function selectPhoto(p: PhotoOption) {
+    setPhotoUrl(p.imageUrl);
+    setPhotoCredit(p.source);
+    setPhotoCreditUrl(`https://${p.source}`);
+    setPhotoZoom(100);
+    setPhotoOffsetY(50);
   }
 
   async function handleDownload() {
@@ -191,13 +250,11 @@ export function PosterGenerator({
                 {allPhotos.map((p, i) => (
                   <button
                     key={i}
-                    onClick={() => {
-                      setPhotoUrl(p.imageUrl);
-                      setPhotoCredit(p.source);
-                    }}
+                    onClick={() => selectPhoto(p)}
                     className={`w-12 h-12 rounded-md overflow-hidden border-2 transition-colors ${
                       photoUrl === p.imageUrl ? "border-orange-500" : "border-gray-200"
                     }`}
+                    title={`From ${p.source}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -212,7 +269,8 @@ export function PosterGenerator({
                   <button
                     onClick={() => {
                       setPhotoUrl(customUpload);
-                      setPhotoCredit("Uploaded photo");
+                      setPhotoCredit("");
+                      setPhotoCreditUrl("");
                     }}
                     className={`w-12 h-12 rounded-md overflow-hidden border-2 transition-colors ${
                       photoUrl === customUpload ? "border-orange-500" : "border-gray-200"
@@ -237,11 +295,67 @@ export function PosterGenerator({
                 />
               </div>
             </div>
+
+            {/* Photo position controls */}
+            {photoUrl && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-500 w-16 shrink-0">Zoom</label>
+                  <input
+                    type="range"
+                    min={100}
+                    max={300}
+                    value={photoZoom}
+                    onChange={(e) => setPhotoZoom(Number(e.target.value))}
+                    className="flex-1 h-1.5 accent-orange-500"
+                  />
+                  <span className="text-xs text-gray-400 w-10 text-right">{photoZoom}%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-500 w-16 shrink-0">Position</label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={photoOffsetY}
+                    onChange={(e) => setPhotoOffsetY(Number(e.target.value))}
+                    className="flex-1 h-1.5 accent-orange-500"
+                  />
+                  <span className="text-xs text-gray-400 w-10 text-right">
+                    {photoOffsetY < 33 ? "Top" : photoOffsetY > 66 ? "Bottom" : "Center"}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Photo credit */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Photo Credit</label>
+                <input
+                  type="text"
+                  value={photoCredit}
+                  onChange={(e) => setPhotoCredit(e.target.value)}
+                  placeholder="Photographer or source name"
+                  className="w-full px-3 py-1.5 rounded-md border border-gray-300 text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Credit URL</label>
+                <input
+                  type="text"
+                  value={photoCreditUrl}
+                  onChange={(e) => setPhotoCreditUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3 py-1.5 rounded-md border border-gray-300 text-sm"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Poster Preview */}
-        <div className="p-4">
+        <div className="p-4 overflow-x-auto">
           <div
             ref={posterRef}
             style={{
@@ -290,10 +404,8 @@ export function PosterGenerator({
                 width: "100%",
                 aspectRatio: "4/3",
                 backgroundColor: "#f3f3f3",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
                 overflow: "hidden",
+                position: "relative",
               }}
             >
               {photoUrl ? (
@@ -301,11 +413,20 @@ export function PosterGenerator({
                 <img
                   src={photoUrl}
                   alt={personName}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: `center ${photoOffsetY}%`,
+                    transform: `scale(${photoZoom / 100})`,
+                    transformOrigin: `center ${photoOffsetY}%`,
+                  }}
                   crossOrigin="anonymous"
                 />
               ) : (
-                <div style={{ color: "#999", fontSize: "14px" }}>No photo available</div>
+                <div style={{ color: "#999", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  No photo available
+                </div>
               )}
             </div>
 
@@ -370,8 +491,22 @@ export function PosterGenerator({
               </div>
               <div style={{ opacity: 0.6, fontSize: "9px" }}>
                 humanimpactproject.com
-                {photoCredit && ` · Photo: ${photoCredit}`}
+                {photoCredit && (
+                  <>
+                    {" · Photo: "}
+                    {photoCreditUrl ? (
+                      <span style={{ textDecoration: "underline" }}>{photoCredit}</span>
+                    ) : (
+                      photoCredit
+                    )}
+                  </>
+                )}
               </div>
+              {photoCreditUrl && (
+                <div style={{ opacity: 0.4, fontSize: "8px", marginTop: "2px" }}>
+                  {photoCreditUrl}
+                </div>
+              )}
             </div>
           </div>
         </div>
