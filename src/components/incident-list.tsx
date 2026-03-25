@@ -454,57 +454,92 @@ export function IncidentList({
               />
             ))}
           </div>
-          {totalPages > 1 && (
-            <Pagination page={page} totalPages={totalPages} />
-          )}
+          <MonthNavigator />
         </>
       )}
     </div>
   );
 }
 
-function Pagination({
-  page,
-  totalPages,
-}: {
-  page: number;
-  totalPages: number;
-}) {
+function MonthNavigator() {
   const searchParams = useSearchParams();
-  const { t } = useLanguage();
+  const currentFrom = searchParams.get("from") || "";
+  const currentTo = searchParams.get("to") || "";
 
-  function pageUrl(p: number) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (p === 1) {
-      params.delete("page");
-    } else {
-      params.set("page", String(p));
+  // Generate months from Jan 2025 to current month
+  const months: Array<{ label: string; from: string; to: string }> = [];
+  const now = new Date();
+  const startYear = 2025;
+  const startMonth = 0; // January
+
+  for (let y = startYear; ; y++) {
+    const endM = y === now.getFullYear() ? now.getMonth() : 11;
+    for (let m = (y === startYear ? startMonth : 0); m <= endM; m++) {
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const label = `${monthNames[m]} ${y}`;
+      const fromDate = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const toDate = `${y}-${String(m + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      months.push({ label, from: fromDate, to: toDate });
     }
+    if (y === now.getFullYear()) break;
+  }
+
+  // Reverse so newest is first
+  months.reverse();
+
+  function monthUrl(from: string, to: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
+    params.delete("range");
+    params.set("from", from);
+    params.set("to", to);
     const qs = params.toString();
     return qs ? `/?${qs}` : "/";
   }
 
+  function allUrl() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
+    params.delete("from");
+    params.delete("to");
+    params.delete("range");
+    const qs = params.toString();
+    return qs ? `/?${qs}` : "/";
+  }
+
+  const isAll = !currentFrom && !currentTo;
+
   return (
-    <div className="flex items-center justify-center gap-2 mt-8">
-      {page > 1 && (
+    <div className="mt-8">
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
         <a
-          href={pageUrl(page - 1)}
-          className="px-3 py-1.5 rounded-md border border-warm-300 text-sm hover:bg-warm-100 transition-colors"
+          href={allUrl()}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            isAll
+              ? "bg-warm-800 text-white"
+              : "border border-warm-300 text-warm-600 hover:bg-warm-100"
+          }`}
         >
-          {t.previous}
+          All
         </a>
-      )}
-      <span className="text-sm text-warm-500">
-        {t.pageOf(page, totalPages)}
-      </span>
-      {page < totalPages && (
-        <a
-          href={pageUrl(page + 1)}
-          className="px-3 py-1.5 rounded-md border border-warm-300 text-sm hover:bg-warm-100 transition-colors"
-        >
-          {t.next}
-        </a>
-      )}
+        {months.map((m) => {
+          const isActive = currentFrom === m.from && currentTo === m.to;
+          return (
+            <a
+              key={m.from}
+              href={monthUrl(m.from, m.to)}
+              className={`px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                isActive
+                  ? "bg-warm-800 text-white font-medium"
+                  : "border border-warm-300 text-warm-600 hover:bg-warm-100"
+              }`}
+            >
+              {m.label}
+            </a>
+          );
+        })}
+      </div>
     </div>
   );
 }

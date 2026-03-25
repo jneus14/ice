@@ -125,14 +125,16 @@ export function buildFilterWhere(filters: IncidentFilters): any {
 }
 
 export async function getIncidents(filters: IncidentFilters = {}) {
-  const { page = 1, pageSize = 50 } = filters;
+  // When browsing by month (date filters set), show all results for that period
+  const hasDateFilter = !!(filters.dateFrom || filters.dateTo || filters.range);
+  const { page = 1, pageSize = hasDateFilter ? 500 : 50 } = filters;
   const where = buildFilterWhere(filters);
 
   const [incidents, total] = await Promise.all([
     prisma.incident.findMany({
       where,
       orderBy: [{ parsedDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
-      skip: (page - 1) * pageSize,
+      skip: hasDateFilter ? 0 : (page - 1) * pageSize,
       take: pageSize,
       select: {
         id: true,
