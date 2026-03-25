@@ -1225,11 +1225,11 @@ export function IncidentCard({
                 const hasPosterTag = rawTags.some((t) => posterTags.has(t));
                 const policyTag = rawTags.includes("Policy/Stats");
                 if (!hasPosterTag || policyTag) return null;
-                // Only show if a specific person is named — check for capitalized multi-word names in headline
-                const headline = incident.headline || "";
+                // Check headline AND first sentence of summary for a specific person's name
+                const textToCheck = (incident.headline || "") + " " + (incident.summary || "").split(".").slice(0, 2).join(".");
                 const namePattern = /\b[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+(?:de\s+la\s+|de\s+|del\s+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,3}\b/;
-                const excludeWords = /^(Federal|Supreme|Trump|Biden|President|Judge|Officer|Agent|Senator|Governor|Mayor|Immigration|Customs|Border|Patrol|Department|Homeland|Security|National|Guard|Police|Sheriff|United|States|San\s|Los\s|New\s|North\s|South\s|El\s|La\s|Las\s)/;
-                const matches = headline.match(new RegExp(namePattern, "g")) || [];
+                const excludeWords = /^(Federal|Supreme|Trump|Biden|President|Judge|Officer|Agent|Senator|Governor|Mayor|Immigration|Customs|Border|Patrol|Department|Homeland|Security|National|Guard|Police|Sheriff|United|States|San\s|Los\s|New\s|North\s|South\s|El\s|La\s|Las\s|Human\s|Rights|According|Department|American)/;
+                const matches = textToCheck.match(new RegExp(namePattern, "g")) || [];
                 const hasName = matches.some(m => !excludeWords.test(m));
                 if (!hasName) return null;
                 return (
