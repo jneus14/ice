@@ -84,7 +84,7 @@ export async function POST(
     // Multiple sources: synthesize directly (no mismatch blocking)
     const result = await synthesizeIncidents(sources).catch(() => ({
       headline: sources[0].headline || incident.headline || "Untitled",
-      summary: sources.map((s) => s.summary).filter(Boolean).join(" "),
+      summary: sources[0].summary || incident.summary || "",
       timeline: [] as Array<{ date: string; event: string; source?: string }>,
     }));
 

@@ -15,7 +15,7 @@ IMPORTANT: Only return mismatch if the sources are about COMPLETELY UNRELATED in
 If the sources cover the same event, policy, topic, or situation — even from different angles or mentioning different people affected by the same event — they match. Return:
 {
   "headline": "A short synthesized headline summarizing the full picture of the incident (max 15 words)",
-  "summary": "A 3-5 sentence factual summary synthesizing all sources, mentioning key developments or updates if the situation evolved over time",
+  "summary": "A 3-5 sentence factual summary (MAX 150 words) synthesizing all sources into one cohesive narrative. Do NOT repeat information from multiple sources — merge overlapping details into single statements.",
   "timeline": [
     {"date": "M/D/YYYY", "event": "Short factual description of what happened on this date"}
   ]
