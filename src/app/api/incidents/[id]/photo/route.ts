@@ -122,67 +122,89 @@ export async function GET(
     }
   }
 
-  // Strategy 3: Search Exa for the person's name to find photos
-  if (results.length < 3) {
+  // Strategy 3: Search Exa broadly for photos of the person
+  if (results.length < 5) {
     const exaKey = process.env.EXA_API_KEY;
     if (exaKey) {
-      try {
-        // Extract person name from headline/summary
-        const text = `${incident.headline ?? ""} ${incident.summary ?? ""}`;
-        const nameMatch = text.match(
-          /([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+(?:de\s+la\s+|de\s+|del\s+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,3})(?:\s*,\s*(?:a |an |who |was ))/
-        ) ?? text.match(
-          /(?:^|\.\s+)([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,2})\s+was\s/
-        );
+      // Extract person name from headline/summary
+      const text = `${incident.headline ?? ""} ${incident.summary ?? ""}`;
+      const namePatterns = [
+        /([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+(?:['"][A-Za-z]+['"]\s+)?(?:de\s+la\s+|de\s+|del\s+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,3})(?:\s*,\s*(?:a |an |who |was |is |age ))/,
+        /(?:^|\.\s+)([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,2})\s+(?:was|has been|is)\s/,
+        /(?:detained|deported|arrested|identifies?)\s+(?:as\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,2})/,
+      ];
+      const stopWords = new Set(["Federal", "Supreme", "Trump", "Biden", "President", "Judge", "Immigration", "Customs", "United", "States", "El", "La", "According", "Human", "American", "National"]);
 
-        if (nameMatch?.[1]) {
-          const personName = nameMatch[1];
-          const exa = new Exa(exaKey);
-          const searchResults = await (exa as any).search(
-            `${personName} immigration ICE`,
-            {
+      let personName: string | null = null;
+      for (const p of namePatterns) {
+        const m = text.match(p);
+        if (m?.[1] && !stopWords.has(m[1].split(" ")[0])) {
+          personName = m[1].replace(/['"]/g, "");
+          break;
+        }
+      }
+
+      if (personName) {
+        const exa = new Exa(exaKey);
+        // Multiple search queries for better coverage
+        const queries = [
+          `${personName} detained ICE photo`,
+          `${personName} immigration`,
+          `${personName} family community`,
+        ];
+
+        for (const query of queries) {
+          if (results.length >= 6) break;
+          try {
+            const searchResults = await (exa as any).search(query, {
               numResults: 3,
               type: "neural",
-            }
-          );
+            });
 
-          if (searchResults.results) {
-            for (const r of searchResults.results) {
-              if (!r.url) continue;
-              // Try to get og:image from search result
-              try {
-                const res = await fetch(r.url, {
-                  headers: {
-                    "User-Agent":
-                      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                    Accept: "text/html",
-                  },
-                  signal: AbortSignal.timeout(6000),
-                  redirect: "follow",
-                });
-                if (!res.ok) continue;
-                const html = await res.text();
-                const ogMatch =
-                  html.match(
-                    /<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i
-                  ) ??
-                  html.match(
-                    /content=["']([^"']+)["']\s+(?:property|name)=["']og:image["']/i
-                  );
-                if (ogMatch?.[1] && !results.some((x) => x.imageUrl === ogMatch[1])) {
-                  results.push({
-                    imageUrl: ogMatch[1],
-                    source: getDomain(r.url),
+            if (searchResults.results) {
+              for (const r of searchResults.results) {
+                if (!r.url || results.length >= 8) continue;
+                try {
+                  const res = await fetch(r.url, {
+                    headers: {
+                      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                      Accept: "text/html",
+                    },
+                    signal: AbortSignal.timeout(6000),
+                    redirect: "follow",
                   });
+                  if (!res.ok) continue;
+                  const html = await res.text();
+
+                  // Try og:image and twitter:image
+                  const imgPatterns = [
+                    /<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i,
+                    /content=["']([^"']+)["']\s+(?:property|name)=["']og:image["']/i,
+                    /<meta\s+(?:property|name)=["']twitter:image["']\s+content=["']([^"']+)["']/i,
+                    /content=["']([^"']+)["']\s+(?:property|name)=["']twitter:image["']/i,
+                  ];
+
+                  for (const pat of imgPatterns) {
+                    const ogMatch = html.match(pat);
+                    if (ogMatch?.[1]) {
+                      const imgUrl = ogMatch[1];
+                      const lower = imgUrl.toLowerCase();
+                      if (lower.includes("logo") || lower.includes("favicon") || lower.includes("icon") || lower.includes("placeholder") || lower.includes("default")) continue;
+                      if (!results.some((x) => x.imageUrl === imgUrl)) {
+                        results.push({ imageUrl: imgUrl, source: getDomain(r.url) });
+                      }
+                      break;
+                    }
+                  }
+                } catch {
+                  // Skip
                 }
-              } catch {
-                // Skip
               }
             }
+          } catch {
+            // Exa query failed, try next
           }
         }
-      } catch {
-        // Exa search failed, continue
       }
     }
   }
