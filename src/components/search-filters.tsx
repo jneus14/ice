@@ -171,6 +171,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
         <input
           type="text"
           placeholder={t.searchPlaceholder}
+          key={`search-${currentSearch}`}
           defaultValue={currentSearch}
           onChange={(e) => {
             const value = e.target.value;
@@ -188,6 +189,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
         <input
           type="text"
           placeholder={t.locationPlaceholder}
+          key={`location-${currentLocation}`}
           defaultValue={currentLocation}
           onChange={(e) => {
             const value = e.target.value;
