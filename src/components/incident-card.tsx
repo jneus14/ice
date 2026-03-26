@@ -30,6 +30,9 @@ type Incident = {
   imageUrl: string | null;
   timeline: string | null;
   approved?: boolean;
+  reviewedA?: boolean;
+  reviewedJ?: boolean;
+  excludePoster?: boolean;
 };
 
 type CombineCandidate = {
