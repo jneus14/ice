@@ -117,6 +117,21 @@ function truncateDescription(summary: string | null, maxChars = 300): string {
   return result || sentences[0] || summary.slice(0, maxChars);
 }
 
+// Default shadow silhouette SVGs as data URIs
+const SILHOUETTE_MALE = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#4a4a4a"/><circle cx="200" cy="140" r="70" fill="#333"/><ellipse cx="200" cy="350" rx="120" ry="100" fill="#333"/></svg>`)}`;
+const SILHOUETTE_FEMALE = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#4a4a4a"/><circle cx="200" cy="130" r="65" fill="#333"/><path d="M135 100 C120 60 160 40 200 50 C240 40 280 60 265 100" fill="#333"/><ellipse cx="200" cy="350" rx="110" ry="100" fill="#333"/></svg>`)}`;
+
+function detectGender(text: string): "male" | "female" | "unknown" {
+  const lower = text.toLowerCase();
+  const femaleWords = /\b(she|her|hers|woman|girl|mother|wife|daughter|sister|pregnant|postpartum|nursing|ms\.|mrs\.)\b/;
+  const maleWords = /\b(he|his|him|man|boy|father|husband|son|brother|mr\.)\b/;
+  const femaleCount = (lower.match(femaleWords) || []).length;
+  const maleCount = (lower.match(maleWords) || []).length;
+  if (femaleCount > maleCount) return "female";
+  if (maleCount > femaleCount) return "male";
+  return "unknown";
+}
+
 export function PosterGenerator({
   incidentId,
   headline,
@@ -134,7 +149,11 @@ export function PosterGenerator({
     truncateDescription(summary)
   );
   const [loadingDescription, setLoadingDescription] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(existingImageUrl ?? null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(() => {
+    if (existingImageUrl) return existingImageUrl;
+    const gender = detectGender(`${headline ?? ""} ${summary ?? ""}`);
+    return gender === "female" ? SILHOUETTE_FEMALE : SILHOUETTE_MALE;
+  });
   const [photoCredit, setPhotoCredit] = useState<string>("");
   const [photoCreditUrl, setPhotoCreditUrl] = useState<string>("");
   const [allPhotos, setAllPhotos] = useState<PhotoOption[]>([]);
@@ -202,7 +221,13 @@ export function PosterGenerator({
       } catch {
         // No photos found
       }
+      // If still no photo after fetching, use default silhouette
       setLoadingPhotos(false);
+      setPhotoUrl((prev) => {
+        if (prev) return prev;
+        const gender = detectGender(`${headline ?? ""} ${summary ?? ""}`);
+        return gender === "female" ? SILHOUETTE_FEMALE : SILHOUETTE_MALE;
+      });
     }
     fetchPhotos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
