@@ -47,7 +47,13 @@ export default async function Home({
         page,
       }),
       getDistinctCountries(),
-      getTotalWithHeadline(),
+      getTotalWithHeadline({
+        search: params.q as string,
+        tags,
+        tagMode: params.tagMode === "any" ? "any" : "all",
+        location: params.location as string,
+        country: params.country as string,
+      }),
       getMapIncidents({
         search: params.q as string,
         tags,

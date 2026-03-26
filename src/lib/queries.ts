@@ -157,10 +157,11 @@ export async function getIncidents(filters: IncidentFilters = {}) {
   return { incidents, total, page, pageSize };
 }
 
-export async function getTotalWithHeadline(): Promise<number> {
-  return prisma.incident.count({
-    where: { headline: { not: null }, approved: true },
-  });
+export async function getTotalWithHeadline(filters: IncidentFilters = {}): Promise<number> {
+  // Count across all months (no date filter), but respect other filters
+  const { dateFrom: _, dateTo: __, range: ___, page: ____, ...rest } = filters;
+  const where = buildFilterWhere(rest);
+  return prisma.incident.count({ where });
 }
 
 export async function getMapIncidents(filters: IncidentFilters = {}) {
