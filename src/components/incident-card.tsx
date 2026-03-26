@@ -1222,42 +1222,31 @@ export function IncidentCard({
                 const hasName = matches.some(m => !excludeWords.test(m));
                 if (!hasName) return null;
 
-                if (editMode) {
-                  return (
-                    <div className="mt-2 flex items-center gap-2">
-                      {!noPoster && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowPoster(true); }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                        >
-                          <span>📋</span> Generate Poster
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (noPoster) { removeTag("no-poster"); } else { addTag("no-poster"); }
-                        }}
-                        className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border transition-colors ${
-                          noPoster
-                            ? "border-red-300 text-red-600 bg-red-50 hover:bg-red-100"
-                            : "border-warm-300 text-warm-500 hover:bg-warm-50"
-                        }`}
-                      >
-                        {noPoster ? "🚫 Poster disabled — click to re-enable" : "🚫 Disable poster"}
-                      </button>
-                    </div>
-                  );
-                }
-
-                if (noPoster) return null;
+                if (!editMode) return null;
                 return (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowPoster(true); }}
-                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                  >
-                    <span>📋</span> Generate Poster
-                  </button>
+                  <div className="mt-2 flex items-center gap-2">
+                    {!noPoster && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowPoster(true); }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                      >
+                        <span>📋</span> Generate Poster
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (noPoster) { removeTag("no-poster"); } else { addTag("no-poster"); }
+                      }}
+                      className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border transition-colors ${
+                        noPoster
+                          ? "border-red-300 text-red-600 bg-red-50 hover:bg-red-100"
+                          : "border-warm-300 text-warm-500 hover:bg-warm-50"
+                      }`}
+                    >
+                      {noPoster ? "🚫 Poster disabled — click to re-enable" : "🚫 Disable poster"}
+                    </button>
+                  </div>
                 );
               })()}
             </div>
