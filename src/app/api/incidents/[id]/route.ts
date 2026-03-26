@@ -22,7 +22,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { headline, date, location, summary, incidentType, country, url, altSources, timeline, reviewedA, reviewedJ, excludePoster } = body;
+  const { headline, date, location, summary, incidentType, country, url, altSources, timeline, reviewedA, reviewedJ, reviewedP, excludePoster } = body;
 
   // Parse date string to a Date object for parsedDate
   let parsedDate: Date | null = null;
@@ -46,6 +46,7 @@ export async function PUT(
       ...(timeline !== undefined ? { timeline: timeline } : {}),
       ...(reviewedA !== undefined ? { reviewedA } : {}),
       ...(reviewedJ !== undefined ? { reviewedJ } : {}),
+      ...(reviewedP !== undefined ? { reviewedP } : {}),
       ...(excludePoster !== undefined ? { excludePoster } : {}),
     },
   });

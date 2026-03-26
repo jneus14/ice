@@ -28,6 +28,7 @@ model Incident {
   approved     Boolean   @default(false)
   reviewedA    Boolean   @default(false)
   reviewedJ    Boolean   @default(false)
+  reviewedP    Boolean   @default(false)
   excludePoster Boolean  @default(false)
   timeline     String?
   rawHtml      String?

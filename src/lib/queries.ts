@@ -151,6 +151,7 @@ export async function getIncidents(filters: IncidentFilters = {}) {
         approved: true,
         reviewedA: true,
         reviewedJ: true,
+        reviewedP: true,
         excludePoster: true,
       },
     }),
