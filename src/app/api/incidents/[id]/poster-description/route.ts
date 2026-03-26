@@ -80,7 +80,7 @@ PRIORITIZE these humanizing details (include ALL that you can find):
 - Legal status details (DACA, green card holder, TPS, asylum seeker, etc.)
 - What happened: when and how they were taken
 
-Write in third person. Be factual but humanizing. Focus on WHO this person is to their community, not legal/political analysis. Start with their name. Do NOT use markdown formatting — plain text only.
+Write in third person. Be STRICTLY FACTUAL — state only what happened. Do NOT editorialize, assess impact, or draw conclusions. Do NOT include sentences like "his story shattered...", "sparked awareness...", "raised questions...", "highlighted the human cost...", or any assessment of broader significance. Just state the facts about the person and what happened to them. Start with their name. Do NOT use markdown formatting — plain text only.
 
 Example: "Jorge Cruz, a father of four, came to the U.S. from Mexico City at age 5. A green card holder married to a U.S. citizen since 2014, he built a thriving food cart business with 25 carts. On August 27, 2025, ICE agents arrested him as he and his wife returned from dropping their children off at school."
 
