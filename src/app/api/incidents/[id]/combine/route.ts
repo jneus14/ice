@@ -108,6 +108,12 @@ export async function GET(
     "over", "into", "being", "which", "when", "where", "some", "other",
     "year", "years", "people", "including", "since", "states", "united",
     "federal", "immigration", "detained", "detention", "agents", "enforcement",
+    "released", "deported", "arrested", "months", "family", "reunites",
+    "reunited", "officer", "officers", "border", "patrol", "custody",
+    "removed", "removal", "court", "judge", "order", "ordered", "hearing",
+    "attorneys", "attorney", "lawyer", "undocumented", "immigrant",
+    "immigrants", "migrant", "migrants", "deportation", "arrest",
+    "facility", "center", "transfer", "transferred",
   ]);
   function getKeywords(text: string): Set<string> {
     return new Set(

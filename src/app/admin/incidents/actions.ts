@@ -429,7 +429,7 @@ export async function findCombineCandidates(id: number): Promise<{
     take: 1000,
   });
 
-  const stopwords = new Set(["after", "with", "from", "that", "this", "their", "about", "been", "have", "were", "they", "will", "would", "could", "should", "during", "before", "while", "under", "between", "through", "against", "without", "within", "also", "than", "more", "said", "says", "according", "told", "over", "into", "being", "which", "when", "where", "some", "other", "year", "years", "people", "including", "since", "states", "united", "federal", "immigration", "detained", "detention", "agents", "enforcement"]);
+  const stopwords = new Set(["after", "with", "from", "that", "this", "their", "about", "been", "have", "were", "they", "will", "would", "could", "should", "during", "before", "while", "under", "between", "through", "against", "without", "within", "also", "than", "more", "said", "says", "according", "told", "over", "into", "being", "which", "when", "where", "some", "other", "year", "years", "people", "including", "since", "states", "united", "federal", "immigration", "detained", "detention", "agents", "enforcement", "released", "deported", "arrested", "months", "family", "reunites", "reunited", "officer", "officers", "border", "patrol", "custody", "removed", "removal", "court", "judge", "order", "ordered", "hearing", "attorneys", "attorney", "lawyer", "undocumented", "immigrant", "immigrants", "migrant", "migrants", "deportation", "arrest", "facility", "center", "transfer", "transferred"]);
   function getKeywords(text: string): Set<string> {
     return new Set(
       text.toLowerCase().split(/\s+/)
