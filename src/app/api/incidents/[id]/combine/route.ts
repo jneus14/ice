@@ -288,8 +288,17 @@ export async function POST(
   const summary = forced.summary;
   const timeline = forced.timeline;
 
-  // Use original date for sorting, not timeline dates
-  const latestParsedDate = primary.parsedDate;
+  // Use the most recent date from either incident
+  const allDates = [primary.parsedDate, secondary.parsedDate]
+    .filter((d): d is Date => d !== null);
+  const latestParsedDate = allDates.length > 0
+    ? new Date(Math.max(...allDates.map((d) => d.getTime())))
+    : null;
+  // Pick the date string that corresponds to the most recent parsedDate
+  const latestDate = latestParsedDate && secondary.parsedDate &&
+    secondary.parsedDate.getTime() === latestParsedDate.getTime()
+    ? secondary.date || primary.date
+    : primary.date || secondary.date;
 
   // Update primary with merged data
   await prisma.incident.update({
@@ -299,9 +308,11 @@ export async function POST(
       headline,
       summary,
       timeline: serializeTimeline(timeline),
+      date: latestDate,
       parsedDate: latestParsedDate,
       status: "COMPLETE",
       approved: true,
+      duplicateOfId: null,
       location: primary.location || secondary.location,
       latitude: primary.latitude || secondary.latitude,
       longitude: primary.longitude || secondary.longitude,

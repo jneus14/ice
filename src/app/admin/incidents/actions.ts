@@ -120,9 +120,13 @@ export async function mergeIncidents(ids: number[], primaryId?: number) {
   const pick = <T>(fn: (i: typeof primary) => T | null): T | null =>
     incidents.reduce<T | null>((acc, inc) => (acc !== null ? acc : fn(inc)), null);
 
-  // If timeline has events, use the most recent event date as parsedDate
-  // so the incident sorts by its latest development in the feed
-  let latestParsedDate = pick((i) => i.parsedDate);
+  // Use the most recent parsedDate across all incidents
+  let latestParsedDate = incidents
+    .map((i) => i.parsedDate)
+    .filter((d): d is Date => d !== null)
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
+  // If timeline has events, use the most recent event date if it's newer
   if (timeline.length > 0) {
     const dates = timeline
       .map((e) => {
@@ -145,7 +149,12 @@ export async function mergeIncidents(ids: number[], primaryId?: number) {
       headline,
       summary,
       timeline: serializeTimeline(timeline),
-      date: pick((i) => i.date),
+      date: latestParsedDate
+        ? incidents
+            .filter((i) => i.parsedDate && i.date)
+            .sort((a, b) => b.parsedDate!.getTime() - a.parsedDate!.getTime())[0]?.date
+          ?? pick((i) => i.date)
+        : pick((i) => i.date),
       parsedDate: latestParsedDate,
       location: pick((i) => i.location),
       latitude: pick((i) => i.latitude),
@@ -154,6 +163,7 @@ export async function mergeIncidents(ids: number[], primaryId?: number) {
       incidentType: pick((i) => i.incidentType),
       status: "COMPLETE",
       approved: true,
+      duplicateOfId: null,
     },
   });
 
@@ -391,6 +401,15 @@ export async function approveMultiple(ids: number[]) {
   });
   revalidatePath("/admin");
   revalidatePath("/");
+}
+
+export async function dismissDuplicate(id: number) {
+  await requireAdmin();
+  await prisma.incident.update({
+    where: { id },
+    data: { duplicateOfId: null },
+  });
+  revalidatePath("/admin");
 }
 
 /** Extract all person names from text. Finds capitalized multi-word sequences. */

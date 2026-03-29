@@ -458,6 +458,11 @@ export async function processInstagramPipeline(incidentId: number): Promise<void
     if (altSourceUrls.length > 0) {
       archiveUrls(altSourceUrls).catch(() => {});
     }
+
+    // Fire-and-forget: scan for duplicate against existing approved incidents
+    import("./duplicate-scan")
+      .then(({ scanForDuplicate }) => scanForDuplicate(incidentId))
+      .catch(() => {});
   } catch (error: any) {
     await prisma.incident.update({
       where: { id: incidentId },

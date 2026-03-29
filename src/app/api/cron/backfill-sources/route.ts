@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import Exa from "exa-js";
+import { verifyArticleRelevance } from "@/lib/instagram-pipeline";
 
 const SOCIAL_DOMAINS = [
   "instagram.com",
@@ -45,33 +46,53 @@ export async function POST(req: NextRequest) {
             status: "COMPLETE",
             OR: [{ altSources: null }, { altSources: "[]" }, { altSources: "" }],
           },
-          select: { id: true, headline: true, url: true },
+          select: { id: true, headline: true, summary: true, url: true },
           orderBy: { id: "desc" },
         });
 
         send(`Found ${incidents.length} incidents without alt sources`);
 
         const exa = new Exa(exaKey);
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
         let updated = 0;
         let totalSources = 0;
 
         for (let i = 0; i < incidents.length; i++) {
           const inc = incidents[i];
           try {
-            const results = await exa.search(inc.headline!, {
+            const searchQuery = [inc.headline, inc.summary].filter(Boolean).join(". ");
+            const results = await exa.search(searchQuery, {
               numResults: 5,
-              type: "keyword",
+              type: "neural",
               excludeDomains: SOCIAL_DOMAINS,
+              contents: { text: { maxCharacters: 3000 } },
             });
 
-            const newsUrls = (results.results || [])
+            const candidates = (results.results || [])
               .filter(
-                (r) =>
+                (r: any) =>
                   r.url &&
                   r.url !== inc.url &&
                   !SOCIAL_DOMAINS.some((d) => r.url.includes(d))
-              )
-              .map((r) => r.url);
+              );
+
+            // Verify relevance with Claude if possible
+            let newsUrls: string[];
+            if (anthropicKey) {
+              const verified: string[] = [];
+              for (const r of candidates) {
+                const ok = await verifyArticleRelevance(
+                  inc.headline!,
+                  inc.summary ?? "",
+                  { url: r.url, title: r.title ?? null, text: (r as any).text ?? null },
+                  anthropicKey
+                );
+                if (ok) verified.push(r.url);
+              }
+              newsUrls = verified;
+            } else {
+              newsUrls = candidates.map((r: any) => r.url);
+            }
 
             if (newsUrls.length > 0) {
               await prisma.incident.update({

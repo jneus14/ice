@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import Exa from "exa-js";
+import { verifyArticleRelevance } from "@/lib/instagram-pipeline";
 
 const EDIT_PASSWORD = "acab";
 const SOCIAL_DOMAINS = [
@@ -45,20 +46,26 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const query = incident.headline || incident.summary;
-  if (!query) {
+  // Use both headline and summary for the search query so Exa returns
+  // results about the same specific incident, not just keyword matches.
+  const parts = [incident.headline, incident.summary].filter(Boolean);
+  if (parts.length === 0) {
     return NextResponse.json(
       { error: "No headline or summary to search with" },
       { status: 400 }
     );
   }
+  const query = parts.join(". ");
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   try {
     const exa = new Exa(exaKey);
     const results = await exa.search(query, {
       numResults: 8,
-      type: "keyword",
+      type: "neural",
       excludeDomains: SOCIAL_DOMAINS,
+      contents: { text: { maxCharacters: 3000 } },
     });
 
     // Collect existing URLs
@@ -70,14 +77,35 @@ export async function POST(
     } catch {}
 
     // Filter to new, non-social URLs
-    const newUrls = (results.results ?? [])
+    const candidates = (results.results ?? [])
       .filter(
-        (r) =>
+        (r: any) =>
           r.url &&
           !existingUrls.has(r.url) &&
           !SOCIAL_DOMAINS.some((d) => r.url.includes(d))
-      )
-      .map((r) => r.url);
+      );
+
+    // Verify each candidate actually covers the same specific incident
+    const refHeadline = incident.headline || "";
+    const refSummary = incident.summary || "";
+    let newUrls: string[];
+
+    if (anthropicKey && refHeadline) {
+      const verified: string[] = [];
+      for (const r of candidates) {
+        const ok = await verifyArticleRelevance(
+          refHeadline,
+          refSummary,
+          { url: r.url, title: r.title ?? null, text: (r as any).text ?? null },
+          anthropicKey
+        );
+        if (ok) verified.push(r.url);
+      }
+      newUrls = verified;
+    } else {
+      // No Anthropic key or no headline — fall back to unverified results
+      newUrls = candidates.map((r: any) => r.url);
+    }
 
     if (newUrls.length === 0) {
       return NextResponse.json({ added: 0, message: "No new sources found" });

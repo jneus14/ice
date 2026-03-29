@@ -209,6 +209,11 @@ export async function processIncidentPipeline(incidentId: number) {
 
     // Fire-and-forget: archive the URL in the Wayback Machine
     archiveUrl(incident.url).catch(() => {});
+
+    // Fire-and-forget: scan for duplicate against existing approved incidents
+    import("./duplicate-scan")
+      .then(({ scanForDuplicate }) => scanForDuplicate(incidentId))
+      .catch(() => {});
   } catch (error: any) {
     // Scrape failed — try Exa fallback before giving up
     const recovered = await fallbackViaExa(

@@ -810,6 +810,77 @@ export function IncidentCard({
       <div className="flex items-stretch gap-3">
         {/* Main content */}
         <div className="flex-1 min-w-0">
+          {/* Reviewer checkboxes — above headline in edit mode */}
+          {editMode && (
+            <div className="flex items-center gap-2 mb-1">
+              <label
+                className="flex items-center gap-0.5 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+                title="Reviewed by A"
+              >
+                <input
+                  type="checkbox"
+                  checked={incident.reviewedA ?? false}
+                  onChange={async (e) => {
+                    e.stopPropagation();
+                    const val = e.target.checked;
+                    await fetch(`/api/incidents/${incident.id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+                      body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedA: val }),
+                    });
+                    router.refresh();
+                  }}
+                  className="w-3.5 h-3.5 rounded accent-green-600 cursor-pointer"
+                />
+                <span className={`text-[10px] font-bold ${(incident.reviewedA ?? false) ? "text-green-600" : "text-warm-300"}`}>A</span>
+              </label>
+              <label
+                className="flex items-center gap-0.5 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+                title="Reviewed by J"
+              >
+                <input
+                  type="checkbox"
+                  checked={incident.reviewedJ ?? false}
+                  onChange={async (e) => {
+                    e.stopPropagation();
+                    const val = e.target.checked;
+                    await fetch(`/api/incidents/${incident.id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+                      body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedJ: val }),
+                    });
+                    router.refresh();
+                  }}
+                  className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer"
+                />
+                <span className={`text-[10px] font-bold ${(incident.reviewedJ ?? false) ? "text-blue-600" : "text-warm-300"}`}>J</span>
+              </label>
+              <label
+                className="flex items-center gap-0.5 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+                title="Reviewed by P"
+              >
+                <input
+                  type="checkbox"
+                  checked={incident.reviewedP ?? false}
+                  onChange={async (e) => {
+                    e.stopPropagation();
+                    const val = e.target.checked;
+                    await fetch(`/api/incidents/${incident.id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+                      body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedP: val }),
+                    });
+                    router.refresh();
+                  }}
+                  className="w-3.5 h-3.5 rounded accent-purple-600 cursor-pointer"
+                />
+                <span className={`text-[10px] font-bold ${(incident.reviewedP ?? false) ? "text-purple-600" : "text-warm-300"}`}>P</span>
+              </label>
+            </div>
+          )}
           {/* Headline */}
           {editMode && inlineEditing === "headline" ? (
             <div className="flex gap-1.5 items-start" onClick={(e) => e.stopPropagation()}>
@@ -1278,76 +1349,9 @@ export function IncidentCard({
           </div>
         )}
 
-        {/* Right side: edit tools only */}
+        {/* Right side: edit button only */}
         {editMode && (
-          <div className="flex items-center gap-2 pt-1 shrink-0">
-            {/* Reviewer checkboxes */}
-            <label
-              className="flex items-center gap-0.5 cursor-pointer"
-              onClick={(e) => e.stopPropagation()}
-              title="Reviewed by A"
-            >
-              <input
-                type="checkbox"
-                checked={incident.reviewedA ?? false}
-                onChange={async (e) => {
-                  e.stopPropagation();
-                  const val = e.target.checked;
-                  await fetch(`/api/incidents/${incident.id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-                    body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedA: val }),
-                  });
-                  router.refresh();
-                }}
-                className="w-3.5 h-3.5 rounded accent-green-600 cursor-pointer"
-              />
-              <span className={`text-[10px] font-bold ${(incident.reviewedA ?? false) ? "text-green-600" : "text-warm-300"}`}>A</span>
-            </label>
-            <label
-              className="flex items-center gap-0.5 cursor-pointer"
-              onClick={(e) => e.stopPropagation()}
-              title="Reviewed by J"
-            >
-              <input
-                type="checkbox"
-                checked={incident.reviewedJ ?? false}
-                onChange={async (e) => {
-                  e.stopPropagation();
-                  const val = e.target.checked;
-                  await fetch(`/api/incidents/${incident.id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-                    body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedJ: val }),
-                  });
-                  router.refresh();
-                }}
-                className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer"
-              />
-              <span className={`text-[10px] font-bold ${(incident.reviewedJ ?? false) ? "text-blue-600" : "text-warm-300"}`}>J</span>
-            </label>
-            <label
-              className="flex items-center gap-0.5 cursor-pointer"
-              onClick={(e) => e.stopPropagation()}
-              title="Reviewed by P"
-            >
-              <input
-                type="checkbox"
-                checked={incident.reviewedP ?? false}
-                onChange={async (e) => {
-                  e.stopPropagation();
-                  const val = e.target.checked;
-                  await fetch(`/api/incidents/${incident.id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-                    body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedP: val }),
-                  });
-                  router.refresh();
-                }}
-                className="w-3.5 h-3.5 rounded accent-purple-600 cursor-pointer"
-              />
-              <span className={`text-[10px] font-bold ${(incident.reviewedP ?? false) ? "text-purple-600" : "text-warm-300"}`}>P</span>
-            </label>
+          <div className="flex items-center pt-1 shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); setCardEditing(!cardEditing); setExpanded(true); }}
               title="Edit incident"

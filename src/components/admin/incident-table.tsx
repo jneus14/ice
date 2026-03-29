@@ -12,6 +12,7 @@ import {
   approveMultiple,
   findCombineCandidates,
   combineIntoExisting,
+  dismissDuplicate,
 } from "@/app/admin/incidents/actions";
 import { processIncident, processAllIncomplete, processSelected } from "@/app/admin/incidents/process-action";
 import { parseAltSources, serializeAltSources } from "@/lib/sources";
@@ -28,6 +29,7 @@ type Incident = {
   country: string | null;
   status: string;
   approved: boolean;
+  duplicateOfId: number | null;
   errorMessage: string | null;
   createdAt: Date;
 };
@@ -89,6 +91,7 @@ function EditableRow({
   selected,
   onToggle,
   onApproved,
+  duplicateMatch,
 }: {
   incident: Incident;
   onDelete: (id: number) => void;
@@ -96,6 +99,7 @@ function EditableRow({
   selected: boolean;
   onToggle: (id: number) => void;
   onApproved: () => void;
+  duplicateMatch: { id: number; headline: string } | null;
 }) {
   const [fields, setFields] = useState({
     sources: toSourcesField(incident.url, incident.altSources),
@@ -113,6 +117,7 @@ function EditableRow({
   const [combining, setCombining] = useState(false);
   const [combineCandidates, setCombineCandidates] = useState<CombineCandidate[] | null>(null);
   const [combiningInto, setCombiningInto] = useState<number | null>(null);
+  const [dismissingDupe, setDismissingDupe] = useState(false);
 
   const update = (field: keyof typeof fields, value: string) => {
     setFields((prev) => ({ ...prev, [field]: value }));
@@ -199,6 +204,18 @@ function EditableRow({
       alert("Combine failed: " + e.message);
     } finally {
       setCombiningInto(null);
+    }
+  };
+
+  const handleDismissDuplicate = async () => {
+    setDismissingDupe(true);
+    try {
+      await dismissDuplicate(incident.id);
+      onApproved(); // refresh
+    } catch (e: any) {
+      alert("Dismiss failed: " + e.message);
+    } finally {
+      setDismissingDupe(false);
     }
   };
 
@@ -362,6 +379,36 @@ function EditableRow({
         </div>
       </td>
     </tr>
+    {/* Duplicate match banner */}
+    {isPending && duplicateMatch && !combineCandidates && (
+      <tr className="bg-amber-50/80">
+        <td colSpan={10} className="px-4 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-amber-800">
+              <span className="font-semibold">Possible duplicate</span> of{" "}
+              <span className="font-mono text-amber-600">[{duplicateMatch.id}]</span>{" "}
+              <span className="text-warm-700">{duplicateMatch.headline}</span>
+            </span>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => handleCombineInto(duplicateMatch.id)}
+                disabled={combiningInto === duplicateMatch.id}
+                className="px-2 py-1 bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 disabled:opacity-50 rounded"
+              >
+                {combiningInto === duplicateMatch.id ? "Merging…" : "Merge into this"}
+              </button>
+              <button
+                onClick={handleDismissDuplicate}
+                disabled={dismissingDupe}
+                className="px-2 py-1 bg-warm-200 text-warm-600 text-xs font-medium hover:bg-warm-300 disabled:opacity-50 rounded"
+              >
+                {dismissingDupe ? "…" : "Dismiss"}
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    )}
     {/* Combine candidates panel */}
     {combineCandidates !== null && (
       <tr className="bg-purple-50/60">
@@ -903,17 +950,28 @@ export function IncidentTable({ incidents }: { incidents: Incident[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((inc) => (
-              <EditableRow
-                key={inc.id}
-                incident={inc}
-                onDelete={handleDelete}
-                onProcessDone={() => router.refresh()}
-                selected={selectedIds.has(inc.id)}
-                onToggle={toggleSelect}
-                onApproved={() => router.refresh()}
-              />
-            ))}
+            {filtered.map((inc) => {
+              const dupeMatch = inc.duplicateOfId
+                ? (() => {
+                    const match = incidents.find((i) => i.id === inc.duplicateOfId);
+                    return match && match.headline
+                      ? { id: match.id, headline: match.headline }
+                      : null;
+                  })()
+                : null;
+              return (
+                <EditableRow
+                  key={inc.id}
+                  incident={inc}
+                  onDelete={handleDelete}
+                  onProcessDone={() => router.refresh()}
+                  selected={selectedIds.has(inc.id)}
+                  onToggle={toggleSelect}
+                  onApproved={() => router.refresh()}
+                  duplicateMatch={dupeMatch}
+                />
+              );
+            })}
           </tbody>
         </table>
       </div>
