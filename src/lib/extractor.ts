@@ -40,7 +40,7 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
   "date": "The date of the incident in M/D/YYYY format if available, otherwise null",
   "location": "City, State abbreviation (e.g. 'Chicago, IL') if available, otherwise null",
   "summary": "A 2-4 sentence factual summary of what happened",
-  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention",
+  "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, Judicial Decisions, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention",
   "country": "Country of origin of the affected person if mentioned, otherwise null"
 }
 
@@ -59,6 +59,7 @@ Rules:
   - "Native American": ONLY for U.S. Native Americans (members of federally recognized tribes, e.g. Navajo, Oglala Sioux, Cherokee).
   - "Indigenous (Non-U.S.)": for indigenous people from other countries (e.g. indigenous Mexicans, Guatemalan Mayans, etc.).
   - "Visa / Legal Status": ONLY for people who had a VALID, current visa or legal status at the time they were detained/deported (e.g. valid work visa, valid student visa, valid tourist visa, green card holders with valid status). Do NOT use for people who overstayed their visa, had expired status, or were undocumented. Overstaying a visa means they NO LONGER have valid status. Use "LPR" instead for lawful permanent residents (green card holders).
+  - "Judicial Decisions": for stories that mention decisions, rulings, or orders by judges in U.S. courts related to immigration enforcement — e.g. a judge ordering someone's release, blocking a deportation, ruling on detention conditions, issuing injunctions against ICE, or ruling on constitutional challenges to enforcement actions. Use alongside other tags as appropriate.
   - "Vigilante": ONLY for non-government actors — civilians impersonating ICE agents, bounty hunters, or vigilantes targeting immigrants. Do NOT use for real ICE/CBP agents using deceptive tactics (false pretenses, unmarked vehicles, fake stories) — those are "Officer Misconduct".
 - If you cannot determine a field, set it to null.
 - The summary should be strictly factual and neutral in tone. Describe only what happened — do not editorialize, assess significance, or use conclusory language.

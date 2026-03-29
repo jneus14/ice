@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
       incidentType,
       imageUrl,
       approved: shouldApprove,
+      lastCombinedAt: new Date(),
     },
   });
 

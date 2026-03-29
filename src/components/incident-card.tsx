@@ -34,6 +34,7 @@ type Incident = {
   reviewedJ?: boolean;
   reviewedP?: boolean;
   excludePoster?: boolean;
+  lastCombinedAt?: Date | string | null;
 };
 
 type CombineCandidate = {
@@ -810,9 +811,18 @@ export function IncidentCard({
       <div className="flex items-stretch gap-3">
         {/* Main content */}
         <div className="flex-1 min-w-0">
-          {/* Reviewer checkboxes — above headline in edit mode */}
+          {/* Reviewer checkboxes + combined badge — above headline in edit mode */}
           {editMode && (
             <div className="flex items-center gap-2 mb-1">
+              {incident.lastCombinedAt && (() => {
+                const combinedDate = new Date(incident.lastCombinedAt as string | Date);
+                const daysSince = (Date.now() - combinedDate.getTime()) / (1000 * 60 * 60 * 24);
+                return daysSince <= 7 ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-100 text-purple-700" title={`Combined on ${combinedDate.toLocaleDateString()}`}>
+                    ⊕ Recently combined
+                  </span>
+                ) : null;
+              })()}
               <label
                 className="flex items-center gap-0.5 cursor-pointer"
                 onClick={(e) => e.stopPropagation()}

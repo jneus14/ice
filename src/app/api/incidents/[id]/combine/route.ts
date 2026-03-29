@@ -313,6 +313,7 @@ export async function POST(
       status: "COMPLETE",
       approved: true,
       duplicateOfId: null,
+      lastCombinedAt: new Date(),
       location: primary.location || secondary.location,
       latitude: primary.latitude || secondary.latitude,
       longitude: primary.longitude || secondary.longitude,

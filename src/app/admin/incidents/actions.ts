@@ -164,6 +164,7 @@ export async function mergeIncidents(ids: number[], primaryId?: number) {
       status: "COMPLETE",
       approved: true,
       duplicateOfId: null,
+      lastCombinedAt: new Date(),
     },
   });
 

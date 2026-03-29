@@ -153,6 +153,7 @@ export async function getIncidents(filters: IncidentFilters = {}) {
         reviewedJ: true,
         reviewedP: true,
         excludePoster: true,
+        lastCombinedAt: true,
       },
     }),
     prisma.incident.count({ where }),

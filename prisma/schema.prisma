@@ -30,8 +30,9 @@ model Incident {
   reviewedJ    Boolean   @default(false)
   reviewedP    Boolean   @default(false)
   excludePoster Boolean  @default(false)
-  duplicateOfId Int?
-  timeline     String?
+  duplicateOfId  Int?
+  lastCombinedAt DateTime?
+  timeline       String?
   rawHtml      String?
   errorMessage String?
   createdAt    DateTime  @default(now())

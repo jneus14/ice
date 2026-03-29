@@ -1,6 +1,7 @@
 export const INCIDENT_TYPE_TAGS = [
   { value: "Climate/Environmental", label: "Climate/Environmental" },
   { value: "Court Process Issue", label: "Court Process Issue" },
+  { value: "Judicial Decisions", label: "Judicial Decisions" },
   { value: "Death", label: "Death" },
   { value: "Deported", label: "Deportation" },
   { value: "3rd Country Deportation", label: "Third Country Deportation" },
