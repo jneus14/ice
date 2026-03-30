@@ -457,6 +457,8 @@ export function IncidentList({
         />
       )}
 
+      <MonthNavigator compact />
+
       {incidents.length === 0 ? (
         <div className="py-12 text-center text-warm-400">
           {t.noIncidents}
@@ -486,7 +488,7 @@ export function IncidentList({
   );
 }
 
-function MonthNavigator() {
+function MonthNavigator({ compact = false }: { compact?: boolean }) {
   const searchParams = useSearchParams();
   // Default to current month when no date filters in URL
   const now = new Date();
@@ -536,7 +538,7 @@ function MonthNavigator() {
   const nextMonth = activeIdx >= 0 && activeIdx < months.length - 1 ? months[activeIdx + 1] : null;
 
   return (
-    <div className="mt-8">
+    <div className={compact ? "mb-4" : "mt-8"}>
       {/* Prev/Next arrows */}
       <div className="flex items-center justify-center gap-3 mb-3">
         {prevMonth ? (
@@ -563,25 +565,27 @@ function MonthNavigator() {
           <span className="px-3 py-1.5 text-sm text-warm-300">Older →</span>
         )}
       </div>
-      {/* All months */}
-      <div className="flex flex-wrap items-center justify-center gap-1.5">
-        {months.map((m) => {
-          const isActive = currentFrom === m.from && currentTo === m.to;
-          return (
-            <a
-              key={m.from}
-              href={monthUrl(m.from, m.to)}
-              className={`px-2.5 py-1.5 rounded-md text-sm transition-colors ${
-                isActive
-                  ? "bg-warm-800 text-white font-medium"
-                  : "border border-warm-300 text-warm-600 hover:bg-warm-100"
-              }`}
-            >
-              {m.label}
-            </a>
-          );
-        })}
-      </div>
+      {/* All months — only in full (non-compact) mode */}
+      {!compact && (
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          {months.map((m) => {
+            const isActive = currentFrom === m.from && currentTo === m.to;
+            return (
+              <a
+                key={m.from}
+                href={monthUrl(m.from, m.to)}
+                className={`px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                  isActive
+                    ? "bg-warm-800 text-white font-medium"
+                    : "border border-warm-300 text-warm-600 hover:bg-warm-100"
+                }`}
+              >
+                {m.label}
+              </a>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
