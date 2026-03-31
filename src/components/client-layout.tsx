@@ -3,6 +3,7 @@
 import { ReactNode, useState } from "react";
 import Image from "next/image";
 import { LanguageProvider, useLanguage, type Lang } from "@/lib/i18n";
+import { PageViewTracker } from "@/components/pageview-tracker";
 
 function FeedbackButton() {
   const [open, setOpen] = useState(false);
@@ -206,6 +207,7 @@ function Inner({ children }: { children: ReactNode }) {
       <SiteHeader />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">{children}</main>
       <SiteFooter />
+      <PageViewTracker />
     </>
   );
 }

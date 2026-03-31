@@ -3,6 +3,7 @@ import { IncidentTable } from "@/components/admin/incident-table";
 import { BackfillButton } from "@/components/admin/backfill-button";
 import { BackfillDatesButton } from "@/components/admin/backfill-dates-button";
 import { FeedbackPanel } from "@/components/admin/feedback-panel";
+import { VisitorStats } from "@/components/admin/visitor-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,9 @@ export default async function AdminPage() {
         <BackfillButton />
         <BackfillDatesButton />
       </div>
+
+      {/* Visitor Analytics */}
+      <VisitorStats />
 
       {/* Feedback */}
       {feedback.length > 0 && <FeedbackPanel feedback={feedback} />}
