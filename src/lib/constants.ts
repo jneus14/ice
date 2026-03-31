@@ -45,6 +45,7 @@ export const ENFORCEMENT_SETTING_TAGS = [
   { value: "Hospital/Medical", label: "Hospital/Medical" },
   { value: "Home/Residence", label: "Home/Residence" },
   { value: "Jail/Prison", label: "Jail/Prison" },
+  { value: "Vehicle/Traffic Stop", label: "Vehicle/Traffic Stop" },
   { value: "Public Space/Street", label: "Public Space/Street" },
   { value: "Immigration Office", label: "Immigration Office" },
   { value: "Shelter", label: "Shelter" },
