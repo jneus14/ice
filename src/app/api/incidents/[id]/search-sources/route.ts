@@ -48,15 +48,36 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Use headline as the primary search query — the full summary is too long
-  // for Exa and causes timeouts. The headline is specific enough for neural search.
-  const query = incident.headline || incident.summary?.slice(0, 200);
-  if (!query) {
+  if (!incident.headline && !incident.summary) {
     return NextResponse.json(
       { error: "No headline or summary to search with" },
       { status: 400 }
     );
   }
+
+  // Build query: headline + any person names found in the summary.
+  // Full summary is too broad (matches unrelated ICE stories); names keep
+  // the query specific without bloating it.
+  const STOP_NAMES = new Set([
+    "United States", "Border Patrol", "White House", "Supreme Court",
+    "Federal Court", "Immigration Judge", "Department of Homeland",
+    "Homeland Security", "Customs Enforcement", "National Guard",
+    "Immigration and Customs",
+  ]);
+  function extractNames(text: string): string[] {
+    const pattern = /\b([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+(?:de\s+la\s+|de\s+|del\s+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){1,3})\b/g;
+    const names: string[] = [];
+    let m;
+    while ((m = pattern.exec(text)) !== null) {
+      const name = m[1];
+      if (!STOP_NAMES.has(name) && name.length > 5) names.push(name);
+    }
+    return [...new Set(names)];
+  }
+
+  const summaryNames = extractNames(incident.summary ?? "");
+  const queryParts = [incident.headline, ...summaryNames].filter(Boolean);
+  const query = queryParts.join(" ");
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
