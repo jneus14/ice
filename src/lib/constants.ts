@@ -36,11 +36,59 @@ export const PERSON_IMPACTED_TAGS = [
   { value: "Visa / Legal Status", label: "Visa/Legal Status" },
 ] as const;
 
+export const ENFORCEMENT_SETTING_TAGS = [
+  { value: "Court/USCIS", label: "Court/USCIS" },
+  { value: "Airport", label: "Airport" },
+  { value: "Workplace", label: "Workplace" },
+  { value: "School", label: "School" },
+  { value: "Church/Place of Worship", label: "Church/Place of Worship" },
+  { value: "Hospital/Medical", label: "Hospital/Medical" },
+  { value: "Home/Residence", label: "Home/Residence" },
+  { value: "Jail/Prison", label: "Jail/Prison" },
+  { value: "Public Space/Street", label: "Public Space/Street" },
+  { value: "Immigration Office", label: "Immigration Office" },
+  { value: "Shelter", label: "Shelter" },
+] as const;
+
 // Combined flat list for backwards compat (admin, queries, etc.)
 export const INCIDENT_TAGS = [
   ...INCIDENT_TYPE_TAGS.map((t) => t.value),
   ...PERSON_IMPACTED_TAGS.map((t) => t.value),
+  ...ENFORCEMENT_SETTING_TAGS.map((t) => t.value),
 ] as const;
+
+export const SOURCE_TYPE_TAGS = [
+  { value: "social-media", label: "Social Media" },
+  { value: "national-news", label: "National News" },
+  { value: "international-news", label: "International News" },
+  { value: "investigative-nonprofit", label: "Investigative / Nonprofit" },
+  { value: "legal-court", label: "Legal / Court" },
+  { value: "local-news", label: "Local News" },
+] as const;
+
+export const SOURCE_TYPE_DOMAINS: Record<string, string[]> = {
+  "social-media": [
+    "instagram.com", "facebook.com", "tiktok.com", "twitter.com", "x.com",
+    "youtube.com", "reddit.com", "threads.net",
+  ],
+  "national-news": [
+    "nytimes.com", "washingtonpost.com", "apnews.com", "cnn.com", "nbcnews.com",
+    "cbsnews.com", "reuters.com", "politico.com", "npr.org", "foxnews.com",
+    "usatoday.com", "abcnews.go.com", "huffpost.com", "thehill.com", "axios.com",
+    "msnbc.com", "nypost.com",
+  ],
+  "international-news": [
+    "bbc.com", "bbc.co.uk", "theguardian.com", "aljazeera.com",
+  ],
+  "investigative-nonprofit": [
+    "propublica.org", "aclu.org", "democracynow.org", "thedailybeast.com",
+    "vice.com", "theintercept.com", "nilc.org", "immigrantdefenseproject.org",
+  ],
+  "legal-court": [
+    "courtlistener.com", "law.cornell.edu", "uscourts.gov", "pacer.gov",
+    "storage.courtlistener.com",
+  ],
+};
 
 export const STATUS = {
   RAW: "RAW",

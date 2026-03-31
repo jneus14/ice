@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { SearchFilters } from "@/components/search-filters";
 import { IncidentMap } from "@/components/incident-map";
 import { IncidentList } from "@/components/incident-list";
@@ -34,6 +35,48 @@ type Incident = {
   timeline: string | null;
   approved?: boolean;
 };
+
+function FeedToggle() {
+  const searchParams = useSearchParams();
+  const currentFeed = searchParams.get("feed") || "incidents";
+
+  function feedUrl(feed: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
+    if (feed === "incidents") {
+      params.delete("feed");
+    } else {
+      params.set("feed", feed);
+    }
+    const qs = params.toString();
+    return qs ? `/?${qs}` : "/";
+  }
+
+  return (
+    <div className="flex rounded-lg border border-warm-300 overflow-hidden mb-4 shadow-sm">
+      <a
+        href={feedUrl("incidents")}
+        className={`flex-1 px-4 py-2.5 text-sm font-semibold text-center transition-colors ${
+          currentFeed === "incidents"
+            ? "bg-warm-800 text-white"
+            : "bg-white text-warm-500 hover:bg-warm-50 hover:text-warm-700"
+        }`}
+      >
+        Incidents
+      </a>
+      <a
+        href={feedUrl("policy")}
+        className={`flex-1 px-4 py-2.5 text-sm font-semibold text-center transition-colors border-l border-warm-300 ${
+          currentFeed === "policy"
+            ? "bg-warm-800 text-white"
+            : "bg-white text-warm-500 hover:bg-warm-50 hover:text-warm-700"
+        }`}
+      >
+        Policy & Resources
+      </a>
+    </div>
+  );
+}
 
 export function PageLayout({
   mapIncidents,
@@ -103,6 +146,11 @@ export function PageLayout({
 
   return (
     <>
+      {/* Feed toggle */}
+      <Suspense fallback={null}>
+        <FeedToggle />
+      </Suspense>
+
       {/* Filters */}
       <Suspense fallback={null}>
         <SearchFilters countries={countries} />

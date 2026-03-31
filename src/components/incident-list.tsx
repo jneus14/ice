@@ -481,8 +481,51 @@ export function IncidentList({
               </p>
             )}
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Pagination page={page} totalPages={totalPages} total={total} />
+          )}
           <MonthNavigator />
         </>
+      )}
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages, total }: { page: number; totalPages: number; total: number }) {
+  const searchParams = useSearchParams();
+
+  function pageUrl(p: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (p <= 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(p));
+    }
+    const qs = params.toString();
+    return qs ? `/?${qs}` : "/";
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-4 py-6">
+      {page > 1 && (
+        <a
+          href={pageUrl(page - 1)}
+          className="px-4 py-2 rounded-lg border border-warm-300 text-sm text-warm-600 hover:bg-warm-100 transition-colors"
+        >
+          ← Previous
+        </a>
+      )}
+      <span className="text-sm text-warm-500">
+        Page {page} of {totalPages} ({total} results)
+      </span>
+      {page < totalPages && (
+        <a
+          href={pageUrl(page + 1)}
+          className="px-4 py-2 rounded-lg border border-warm-300 text-sm font-medium text-warm-700 hover:bg-warm-100 transition-colors"
+        >
+          More →
+        </a>
       )}
     </div>
   );
@@ -495,7 +538,7 @@ function MonthNavigator({ compact = false }: { compact?: boolean }) {
   const defaultFrom = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   const defaultLastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const defaultTo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(defaultLastDay).padStart(2, "0")}`;
-  const hasSearchFilters = searchParams.get("q") || searchParams.get("tag") || searchParams.get("location") || searchParams.get("country") || searchParams.get("range");
+  const hasSearchFilters = searchParams.get("q") || searchParams.get("tag") || searchParams.get("location") || searchParams.get("country") || searchParams.get("range") || searchParams.get("sourceType");
   const currentFrom = searchParams.get("from") || (!hasSearchFilters ? defaultFrom : "");
   const currentTo = searchParams.get("to") || (!hasSearchFilters ? defaultTo : "");
 

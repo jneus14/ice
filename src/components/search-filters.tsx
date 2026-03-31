@@ -5,6 +5,8 @@ import { useCallback, useRef, useState, useTransition } from "react";
 import {
   INCIDENT_TYPE_TAGS,
   PERSON_IMPACTED_TAGS,
+  ENFORCEMENT_SETTING_TAGS,
+  SOURCE_TYPE_TAGS,
 } from "@/lib/constants";
 import { useLanguage } from "@/lib/i18n";
 
@@ -28,12 +30,26 @@ function TagSection({
   const [open, setOpen] = useState(false);
   const activeCount = tags.filter((t) => activeTags.includes(t.value)).length;
 
+  const tagButtons = tags.map((tag) => {
+    const active = activeTags.includes(tag.value);
+    return (
+      <button
+        key={tag.value}
+        onClick={() => onToggle(tag.value)}
+        className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
+          active
+            ? `${colorActive} text-white border-transparent`
+            : `bg-white ${colorInactive} hover:border-current`
+        }`}
+      >
+        {translate(tag.value) ?? tag.label}
+      </button>
+    );
+  });
+
   return (
     <div>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full text-left group"
-      >
+      <div className="flex items-center gap-2 mb-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-warm-500">
           {label}
         </p>
@@ -42,7 +58,17 @@ function TagSection({
             {activeCount}
           </span>
         )}
-        <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full border-2 border-warm-400 transition-transform ${open ? "rotate-180 bg-warm-600 border-warm-600" : "bg-warm-100"}`}>
+      </div>
+      {/* Always show tags — single line when collapsed, all when expanded */}
+      <div className="flex items-center gap-1.5">
+        <div className={`flex flex-wrap gap-1.5 ${open ? "" : "max-h-[30px] overflow-hidden"} flex-1 min-w-0`}>
+          {tagButtons}
+        </div>
+        <button
+          onClick={() => setOpen(!open)}
+          className={`flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full border-2 transition-transform ${open ? "rotate-180 bg-warm-600 border-warm-600" : "border-warm-400 bg-warm-100 hover:bg-warm-200"}`}
+          title={open ? "Show less" : "Show all"}
+        >
           <svg
             className={`w-3 h-3 ${open ? "text-white" : "text-warm-600"}`}
             fill="none"
@@ -52,47 +78,8 @@ function TagSection({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-        </span>
-      </button>
-      {open && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {tags.map((tag) => {
-            const active = activeTags.includes(tag.value);
-            return (
-              <button
-                key={tag.value}
-                onClick={() => onToggle(tag.value)}
-                className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                  active
-                    ? `${colorActive} text-white border-transparent`
-                    : `bg-white ${colorInactive} hover:border-current`
-                }`}
-              >
-                {translate(tag.value) ?? tag.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {/* Show active tags as compact chips even when collapsed */}
-      {!open && activeCount > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-1.5">
-          {tags
-            .filter((t) => activeTags.includes(t.value))
-            .map((tag) => (
-              <button
-                key={tag.value}
-                onClick={() => onToggle(tag.value)}
-                className={`px-2 py-0.5 text-[11px] rounded-full ${colorActive} text-white flex items-center gap-1`}
-              >
-                {translate(tag.value) ?? tag.label}
-                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            ))}
-        </div>
-      )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -106,6 +93,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
   const currentSearch = searchParams.get("q") || "";
   const currentTags = searchParams.getAll("tag");
   const currentTagMode = (searchParams.get("tagMode") || "all") as "all" | "any";
+  const currentSourceTypes = searchParams.getAll("sourceType");
   const currentCountry = searchParams.get("country") || "";
   const currentLocation = searchParams.get("location") || "";
   const currentDateFrom = searchParams.get("from") || "";
@@ -130,6 +118,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
   const hasFilters =
     currentSearch ||
     currentTags.length > 0 ||
+    currentSourceTypes.length > 0 ||
     currentCountry ||
     currentLocation ||
     currentDateFrom ||
@@ -163,6 +152,15 @@ export function SearchFilters({ countries }: { countries: string[] }) {
     updateFilters({
       tag: newTags.length > 0 ? newTags : null,
       ...(newTags.length <= 1 ? { tagMode: null } : {}),
+    });
+  };
+
+  const toggleSourceType = (st: string) => {
+    const newTypes = currentSourceTypes.includes(st)
+      ? currentSourceTypes.filter((t) => t !== st)
+      : [...currentSourceTypes, st];
+    updateFilters({
+      sourceType: newTypes.length > 0 ? newTypes : null,
     });
   };
 
@@ -247,6 +245,7 @@ export function SearchFilters({ countries }: { countries: string[] }) {
               q: null,
               tag: null,
               tagMode: null,
+              sourceType: null,
               country: null,
               location: null,
               from: null,
@@ -294,6 +293,26 @@ export function SearchFilters({ countries }: { countries: string[] }) {
         colorActive="bg-purple-500"
         colorInactive="text-purple-600 border-purple-300"
         translate={(v) => t.tags.personImpacted[v]}
+      />
+
+      <TagSection
+        label={t.enforcementSetting}
+        tags={ENFORCEMENT_SETTING_TAGS}
+        activeTags={currentTags}
+        onToggle={toggleTag}
+        colorActive="bg-green-600"
+        colorInactive="text-green-700 border-green-300"
+        translate={(v) => t.tags.enforcementSettings[v]}
+      />
+
+      <TagSection
+        label={t.sourceType}
+        tags={SOURCE_TYPE_TAGS}
+        activeTags={currentSourceTypes}
+        onToggle={toggleSourceType}
+        colorActive="bg-orange-500"
+        colorInactive="text-orange-600 border-orange-300"
+        translate={(v) => t.tags.sourceTypes[v]}
       />
 
       {/* ALL / ANY toggle — only shown when 2+ tags are active */}

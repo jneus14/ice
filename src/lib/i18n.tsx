@@ -55,10 +55,14 @@ type T = {
   // Not found
   pageNotFound: string;
   returnHome: string;
+  enforcementSetting: string;
+  sourceType: string;
   // Tag labels
   tags: {
     incidentTypes: TagMap;
     personImpacted: TagMap;
+    enforcementSettings: TagMap;
+    sourceTypes: TagMap;
   };
 };
 
@@ -104,6 +108,8 @@ const en: T = {
   unlock: "Unlock",
   cancel: "Cancel",
   browseByType: "Browse by Incident Type",
+  enforcementSetting: "Enforcement Setting",
+  sourceType: "Source Type",
   pageNotFound: "Page not found",
   returnHome: "Return home",
   tags: {
@@ -141,6 +147,27 @@ const en: T = {
       "Protester/Intervenor": "Protester/Intervenor",
       "U.S. Citizen": "U.S. Citizen",
       "Visa / Legal Status": "Visa/Legal Status",
+    },
+    enforcementSettings: {
+      "Court/USCIS": "Court/USCIS",
+      "Airport": "Airport",
+      "Workplace": "Workplace",
+      "School": "School",
+      "Church/Place of Worship": "Church/Place of Worship",
+      "Hospital/Medical": "Hospital/Medical",
+      "Home/Residence": "Home/Residence",
+      "Jail/Prison": "Jail/Prison",
+      "Public Space/Street": "Public Space/Street",
+      "Immigration Office": "Immigration Office",
+      "Shelter": "Shelter",
+    },
+    sourceTypes: {
+      "social-media": "Social Media",
+      "national-news": "National News",
+      "international-news": "International News",
+      "investigative-nonprofit": "Investigative / Nonprofit",
+      "legal-court": "Legal / Court",
+      "local-news": "Local News",
     },
   },
 };
@@ -188,6 +215,8 @@ const es: T = {
   unlock: "Desbloquear",
   cancel: "Cancelar",
   browseByType: "Explorar por tipo de incidente",
+  enforcementSetting: "Lugar de operativo",
+  sourceType: "Tipo de fuente",
   pageNotFound: "Página no encontrada",
   returnHome: "Volver al inicio",
   tags: {
@@ -225,6 +254,27 @@ const es: T = {
       "Protester/Intervenor": "Manifestante/Interventor",
       "U.S. Citizen": "Ciudadano/a de EE.UU.",
       "Visa / Legal Status": "Visa/Estatus migratorio",
+    },
+    enforcementSettings: {
+      "Court/USCIS": "Tribunal/USCIS",
+      "Airport": "Aeropuerto",
+      "Workplace": "Lugar de trabajo",
+      "School": "Escuela",
+      "Church/Place of Worship": "Iglesia/Lugar de culto",
+      "Hospital/Medical": "Hospital/Centro médico",
+      "Home/Residence": "Hogar/Residencia",
+      "Jail/Prison": "Cárcel/Prisión",
+      "Public Space/Street": "Espacio público/Calle",
+      "Immigration Office": "Oficina de inmigración",
+      "Shelter": "Refugio",
+    },
+    sourceTypes: {
+      "social-media": "Redes sociales",
+      "national-news": "Noticias nacionales",
+      "international-news": "Noticias internacionales",
+      "investigative-nonprofit": "Investigación / ONG",
+      "legal-court": "Legal / Judicial",
+      "local-news": "Noticias locales",
     },
   },
 };

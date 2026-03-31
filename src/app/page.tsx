@@ -17,13 +17,18 @@ export default async function Home({
     typeof params.tag === "string"
       ? [params.tag]
       : (params.tag as string[] | undefined);
+  const sourceTypes =
+    typeof params.sourceType === "string"
+      ? [params.sourceType]
+      : (params.sourceType as string[] | undefined);
 
   const page = Number(params.page) || 1;
+  const feed = (params.feed === "policy" ? "policy" : "incidents") as "incidents" | "policy";
 
   // Default to current month when no date filters or search are set
   let dateFrom = params.from as string | undefined;
   let dateTo = params.to as string | undefined;
-  const hasSearchFilters = params.q || params.tag || params.location || params.country || params.range;
+  const hasSearchFilters = params.q || params.tag || params.location || params.country || params.range || params.sourceType;
   if (!dateFrom && !dateTo && !hasSearchFilters) {
     const now = new Date();
     const y = now.getFullYear();
@@ -39,6 +44,8 @@ export default async function Home({
         search: params.q as string,
         tags,
         tagMode: params.tagMode === "any" ? "any" : "all",
+        sourceTypes,
+        feed,
         location: params.location as string,
         country: params.country as string,
         dateFrom,
@@ -51,6 +58,8 @@ export default async function Home({
         search: params.q as string,
         tags,
         tagMode: params.tagMode === "any" ? "any" : "all",
+        sourceTypes,
+        feed,
         location: params.location as string,
         country: params.country as string,
       }),
@@ -58,6 +67,8 @@ export default async function Home({
         search: params.q as string,
         tags,
         tagMode: params.tagMode === "any" ? "any" : "all",
+        sourceTypes,
+        feed,
         location: params.location as string,
         country: params.country as string,
       }),

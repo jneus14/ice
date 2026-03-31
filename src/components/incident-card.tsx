@@ -3,7 +3,7 @@
 import { useState, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { parseAltSources } from "@/lib/sources";
-import { INCIDENT_TYPE_TAGS, PERSON_IMPACTED_TAGS } from "@/lib/constants";
+import { INCIDENT_TYPE_TAGS, PERSON_IMPACTED_TAGS, ENFORCEMENT_SETTING_TAGS } from "@/lib/constants";
 import { useLanguage } from "@/lib/i18n";
 
 const PosterGenerator = lazy(() =>
@@ -150,11 +150,13 @@ function isSocial(url: string): boolean {
 
 const incidentTypeSet = new Set<string>(INCIDENT_TYPE_TAGS.map((t) => t.value));
 const personImpactedSet = new Set<string>(PERSON_IMPACTED_TAGS.map((t) => t.value));
+const enforcementSettingSet = new Set<string>(ENFORCEMENT_SETTING_TAGS.map((t) => t.value));
 
 function getTagLabel(value: string): string {
   return (
     INCIDENT_TYPE_TAGS.find((t) => t.value === value)?.label ??
     PERSON_IMPACTED_TAGS.find((t) => t.value === value)?.label ??
+    ENFORCEMENT_SETTING_TAGS.find((t) => t.value === value)?.label ??
     value
   );
 }
@@ -515,8 +517,9 @@ export function IncidentCard({
 
   const incidentTypeTags = rawTags.filter((t) => incidentTypeSet.has(t));
   const personImpactedTags = rawTags.filter((t) => personImpactedSet.has(t));
+  const enforcementSettingTags = rawTags.filter((t) => enforcementSettingSet.has(t));
   const otherTags = rawTags.filter(
-    (t) => !incidentTypeSet.has(t) && !personImpactedSet.has(t)
+    (t) => !incidentTypeSet.has(t) && !personImpactedSet.has(t) && !enforcementSettingSet.has(t)
   );
 
   const allSources = [...new Set([incident.url, ...parseAltSources(incident.altSources)])];
@@ -1259,6 +1262,29 @@ export function IncidentCard({
                       </a>
                     )
                   ))}
+                  {enforcementSettingTags.map((tag) => (
+                    editMode ? (
+                      <span
+                        key={`es:${tag}`}
+                        className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-green-50 text-green-700 border border-green-200 inline-flex items-center gap-1"
+                      >
+                        {t.tags.enforcementSettings[tag] ?? getTagLabel(tag)}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeTag(tag); }}
+                          className="text-green-400 hover:text-red-500 ml-0.5 leading-none"
+                        >✕</button>
+                      </span>
+                    ) : (
+                      <a
+                        key={`es:${tag}`}
+                        href={`/?tag=${encodeURIComponent(tag)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2 py-0.5 text-[0.7rem] font-medium rounded-full bg-green-50 text-green-700 border border-green-200 inline-flex items-center gap-1 hover:bg-green-100 transition-colors cursor-pointer no-underline"
+                      >
+                        {t.tags.enforcementSettings[tag] ?? getTagLabel(tag)}
+                      </a>
+                    )
+                  ))}
                   {editMode && (
                     <div className="relative">
                       <input
@@ -1272,7 +1298,7 @@ export function IncidentCard({
                         className="w-20 px-2 py-0.5 text-[0.7rem] rounded-full border border-dashed border-warm-300 text-warm-500 placeholder:text-warm-300 focus:outline-none focus:border-blue-400 focus:w-36 transition-all"
                       />
                       {tagDropdownOpen && tagInput.length > 0 && (() => {
-                        const allTags = [...INCIDENT_TYPE_TAGS, ...PERSON_IMPACTED_TAGS];
+                        const allTags = [...INCIDENT_TYPE_TAGS, ...PERSON_IMPACTED_TAGS, ...ENFORCEMENT_SETTING_TAGS];
                         const filtered = allTags.filter(t =>
                           !effectiveTags.includes(t.value) &&
                           (t.value.toLowerCase().includes(tagInput.toLowerCase()) || t.label.toLowerCase().includes(tagInput.toLowerCase()))

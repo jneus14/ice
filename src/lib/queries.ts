@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { SOURCE_TYPE_DOMAINS } from "./constants";
 
 export function parseFiltersFromParams(params: URLSearchParams): IncidentFilters {
   return {
@@ -17,6 +18,8 @@ export type IncidentFilters = {
   search?: string;
   tags?: string[];
   tagMode?: "all" | "any";
+  sourceTypes?: string[];
+  feed?: "incidents" | "policy";
   location?: string;
   country?: string;
   dateFrom?: string;
@@ -43,7 +46,7 @@ function getDateCutoff(range: string): Date | null {
 }
 
 export function buildFilterWhere(filters: IncidentFilters): any {
-  const { search, tags, tagMode = "all", location, country, range, dateFrom, dateTo } = filters;
+  const { search, tags, tagMode = "all", sourceTypes, feed = "incidents", location, country, range, dateFrom, dateTo } = filters;
   const AND: any[] = [];
 
   if (search) {
@@ -106,6 +109,34 @@ export function buildFilterWhere(filters: IncidentFilters): any {
     AND.push({ country: { contains: country } });
   }
 
+  if (sourceTypes && sourceTypes.length > 0) {
+    // Collect all domain conditions for selected source types
+    const allKnownDomains = Object.values(SOURCE_TYPE_DOMAINS).flat();
+    const typeConditions: any[] = [];
+
+    for (const st of sourceTypes) {
+      if (st === "local-news") {
+        // Local news = NOT matching any known domain category
+        typeConditions.push({
+          AND: allKnownDomains.map((d) => ({
+            url: { not: { contains: d } },
+          })),
+        });
+      } else {
+        const domains = SOURCE_TYPE_DOMAINS[st];
+        if (domains) {
+          typeConditions.push({
+            OR: domains.map((d) => ({ url: { contains: d } })),
+          });
+        }
+      }
+    }
+
+    if (typeConditions.length > 0) {
+      AND.push({ OR: typeConditions });
+    }
+  }
+
   if (range && range !== "all") {
     const cutoff = getDateCutoff(range);
     if (cutoff) {
@@ -120,6 +151,30 @@ export function buildFilterWhere(filters: IncidentFilters): any {
     AND.push({ parsedDate: { lte: new Date(dateTo + "T23:59:59Z") } });
   }
 
+  // Feed filter: separate incidents from policy/resources
+  if (feed === "policy") {
+    AND.push({
+      OR: [
+        { incidentType: { contains: "Policy/Stats" } },
+        { incidentType: { contains: "Resources" } },
+      ],
+    });
+  } else {
+    // Default "incidents" feed: exclude policy/resources-only items
+    AND.push({
+      OR: [
+        { incidentType: { not: { contains: "Policy/Stats" } } },
+        { incidentType: null },
+      ],
+    });
+    AND.push({
+      OR: [
+        { incidentType: { not: { contains: "Resources" } } },
+        { incidentType: null },
+      ],
+    });
+  }
+
   AND.push({ headline: { not: null } });
   AND.push({ approved: true });
 
@@ -127,17 +182,14 @@ export function buildFilterWhere(filters: IncidentFilters): any {
 }
 
 export async function getIncidents(filters: IncidentFilters = {}) {
-  // When browsing by month (date filters set), show all results for that period
-  // When searching/filtering, show up to 200 results
-  const hasDateFilter = !!(filters.dateFrom || filters.dateTo || filters.range);
-  const { page = 1, pageSize = hasDateFilter ? 500 : 200 } = filters;
+  const { page = 1, pageSize = 50 } = filters;
   const where = buildFilterWhere(filters);
 
   const [incidents, total] = await Promise.all([
     prisma.incident.findMany({
       where,
       orderBy: [{ parsedDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
-      skip: hasDateFilter ? 0 : (page - 1) * pageSize,
+      skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
         id: true,
