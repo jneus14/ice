@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import Exa from "exa-js";
 import { verifyArticleRelevance } from "@/lib/instagram-pipeline";
 
+export const maxDuration = 60; // seconds — override default 10s serverless timeout
+
 const EDIT_PASSWORD = "acab";
 const SOCIAL_DOMAINS = [
   "instagram.com",
@@ -46,16 +48,15 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Use both headline and summary for the search query so Exa returns
-  // results about the same specific incident, not just keyword matches.
-  const parts = [incident.headline, incident.summary].filter(Boolean);
-  if (parts.length === 0) {
+  // Use headline as the primary search query — the full summary is too long
+  // for Exa and causes timeouts. The headline is specific enough for neural search.
+  const query = incident.headline || incident.summary?.slice(0, 200);
+  if (!query) {
     return NextResponse.json(
       { error: "No headline or summary to search with" },
       { status: 400 }
     );
   }
-  const query = parts.join(". ");
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
@@ -91,17 +92,18 @@ export async function POST(
     let newUrls: string[];
 
     if (anthropicKey && refHeadline) {
-      const verified: string[] = [];
-      for (const r of candidates) {
-        const ok = await verifyArticleRelevance(
-          refHeadline,
-          refSummary,
-          { url: r.url, title: r.title ?? null, text: (r as any).text ?? null },
-          anthropicKey
-        );
-        if (ok) verified.push(r.url);
-      }
-      newUrls = verified;
+      // Run verifications in parallel to avoid serial Claude call timeouts
+      const results = await Promise.all(
+        candidates.map((r) =>
+          verifyArticleRelevance(
+            refHeadline,
+            refSummary,
+            { url: r.url, title: r.title ?? null, text: (r as any).text ?? null },
+            anthropicKey
+          ).then((ok) => (ok ? r.url : null))
+        )
+      );
+      newUrls = results.filter((u): u is string => u !== null);
     } else {
       // No Anthropic key or no headline — fall back to unverified results
       newUrls = candidates.map((r: any) => r.url);
