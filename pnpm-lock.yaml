@@ -12,7 +12,7 @@ importers:
         specifier: ^0.78.0
         version: 0.78.0(zod@3.25.76)
       '@prisma/client':
-        specifier: ^6.19.2
+        specifier: 6.19.2
         version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
       csv-parse:
         specifier: ^6.1.0
@@ -32,9 +32,6 @@ importers:
       next:
         specifier: 16.1.6
         version: 16.1.6(@babel/core@7.29.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      prisma:
-        specifier: ^6.19.2
-        version: 6.19.2(typescript@5.9.3)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -81,6 +78,9 @@ importers:
       pg:
         specifier: ^8.20.0
         version: 8.20.0
+      prisma:
+        specifier: 6.19.2
+        version: 6.19.2(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.2.1
