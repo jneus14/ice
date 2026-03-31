@@ -300,7 +300,12 @@ export async function POST(
     ? secondary.date || primary.date
     : primary.date || secondary.date;
 
-  // Update primary with merged data
+  // Merge tags: combine unique tags from both incidents, preserving primary's manual edits
+  const primaryTags = (primary.incidentType ?? "").split(",").map(t => t.trim()).filter(Boolean);
+  const secondaryTags = (secondary.incidentType ?? "").split(",").map(t => t.trim()).filter(Boolean);
+  const mergedTags = [...new Set([...primaryTags, ...secondaryTags])].join(", ");
+
+  // Update primary with merged data — preserve primary's manual edits for location/tags
   await prisma.incident.update({
     where: { id: primary.id },
     data: {
@@ -318,7 +323,7 @@ export async function POST(
       latitude: primary.latitude || secondary.latitude,
       longitude: primary.longitude || secondary.longitude,
       country: primary.country || secondary.country,
-      incidentType: primary.incidentType || secondary.incidentType,
+      incidentType: mergedTags || null,
     },
   });
 

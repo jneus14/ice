@@ -499,6 +499,11 @@ function MonthNavigator({ compact = false }: { compact?: boolean }) {
   const currentFrom = searchParams.get("from") || (!hasSearchFilters ? defaultFrom : "");
   const currentTo = searchParams.get("to") || (!hasSearchFilters ? defaultTo : "");
 
+  // Don't show month navigation when search/filter results span all dates
+  if (hasSearchFilters && !searchParams.get("from") && !searchParams.get("to")) {
+    return null;
+  }
+
   // Generate months from Jan 2025 to current month
   const months: Array<{ label: string; from: string; to: string }> = [];
   const startYear = 2025;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import {
   INCIDENT_TYPE_TAGS,
   PERSON_IMPACTED_TAGS,
@@ -112,6 +112,21 @@ export function SearchFilters({ countries }: { countries: string[] }) {
   const currentDateTo = searchParams.get("to") || "";
   const currentRange = searchParams.get("range") || "";
 
+  const [localSearch, setLocalSearch] = useState(currentSearch);
+  const [localLocation, setLocalLocation] = useState(currentLocation);
+  const prevSearchRef = useRef(currentSearch);
+  const prevLocationRef = useRef(currentLocation);
+
+  // Sync local state when URL params change externally (e.g. clear filters)
+  if (prevSearchRef.current !== currentSearch) {
+    prevSearchRef.current = currentSearch;
+    if (localSearch !== currentSearch) setLocalSearch(currentSearch);
+  }
+  if (prevLocationRef.current !== currentLocation) {
+    prevLocationRef.current = currentLocation;
+    if (localLocation !== currentLocation) setLocalLocation(currentLocation);
+  }
+
   const hasFilters =
     currentSearch ||
     currentTags.length > 0 ||
@@ -171,14 +186,17 @@ export function SearchFilters({ countries }: { countries: string[] }) {
         <input
           type="text"
           placeholder={t.searchPlaceholder}
-          key={`search-${currentSearch}`}
-          defaultValue={currentSearch}
-          onChange={(e) => {
-            const value = e.target.value;
-            const timeout = setTimeout(() => {
-              updateFilters({ q: value || null });
-            }, 300);
-            return () => clearTimeout(timeout);
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              updateFilters({ q: localSearch || null });
+            }
+          }}
+          onBlur={() => {
+            if (localSearch !== currentSearch) {
+              updateFilters({ q: localSearch || null });
+            }
           }}
           className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-warm-300 bg-white text-sm text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-warm-500 transition-colors"
         />
@@ -189,14 +207,17 @@ export function SearchFilters({ countries }: { countries: string[] }) {
         <input
           type="text"
           placeholder={t.locationPlaceholder}
-          key={`location-${currentLocation}`}
-          defaultValue={currentLocation}
-          onChange={(e) => {
-            const value = e.target.value;
-            const timeout = setTimeout(() => {
-              updateFilters({ location: value || null });
-            }, 300);
-            return () => clearTimeout(timeout);
+          value={localLocation}
+          onChange={(e) => setLocalLocation(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              updateFilters({ location: localLocation || null });
+            }
+          }}
+          onBlur={() => {
+            if (localLocation !== currentLocation) {
+              updateFilters({ location: localLocation || null });
+            }
           }}
           className="px-3 py-2 rounded-lg border border-warm-300 bg-white text-warm-700 text-sm focus:outline-none focus:border-warm-500 w-full sm:w-44"
         />

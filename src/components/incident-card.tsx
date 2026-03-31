@@ -837,7 +837,7 @@ export function IncidentCard({
                     await fetch(`/api/incidents/${incident.id}`, {
                       method: "PUT",
                       headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-                      body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedA: val }),
+                      body: JSON.stringify({ reviewedA: val }),
                     });
                     router.refresh();
                   }}
@@ -859,7 +859,7 @@ export function IncidentCard({
                     await fetch(`/api/incidents/${incident.id}`, {
                       method: "PUT",
                       headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-                      body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedJ: val }),
+                      body: JSON.stringify({ reviewedJ: val }),
                     });
                     router.refresh();
                   }}
@@ -881,7 +881,7 @@ export function IncidentCard({
                     await fetch(`/api/incidents/${incident.id}`, {
                       method: "PUT",
                       headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
-                      body: JSON.stringify({ headline: incident.headline, date: incident.date, location: incident.location, summary: incident.summary, incidentType: incident.incidentType, country: incident.country, reviewedP: val }),
+                      body: JSON.stringify({ reviewedP: val }),
                     });
                     router.refresh();
                   }}
@@ -1211,7 +1211,7 @@ export function IncidentCard({
                   </div>
                 );
               })()}
-              {rawTags.length > 0 && (
+              {(rawTags.length > 0 || editMode) && (
                 <div className="flex flex-wrap gap-1.5">
                   {incidentTypeTags.map((tag) => (
                     editMode ? (

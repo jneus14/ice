@@ -38,7 +38,7 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
 {
   "headline": "A short headline summarizing the incident (max 15 words)",
   "date": "The date of the incident in M/D/YYYY format if available, otherwise null",
-  "location": "City, State abbreviation (e.g. 'Chicago, IL') if available, otherwise null",
+  "location": "City, State abbreviation (e.g. 'St. Paul, MN' or 'Chicago, IL'). MUST be the specific city/town name, NEVER use the full state name (e.g. 'Minnesota, MN' is WRONG). If no specific city is mentioned, use the county or region. If only a state is known, use just the state abbreviation (e.g. 'TX'). Null if unavailable.",
   "summary": "A 2-4 sentence factual summary of what happened",
   "incidentType": "Comma-separated tags from ONLY these options: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, Judicial Decisions, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention",
   "country": "Country of origin of the affected person if mentioned, otherwise null"

@@ -87,12 +87,14 @@ export function buildFilterWhere(filters: IncidentFilters): any {
     const lower = location.toLowerCase().trim();
     const abbrev = stateMap[lower];
     if (abbrev) {
-      // Match either the full state name or abbreviation in location field
+      // Match full state name OR standard "City, ST" / "ST" abbreviation patterns
+      // Use endsWith for abbreviation to avoid substring false positives
+      // (e.g. "ME" matching "Mexico" or "Lome, Togo")
       AND.push({
         OR: [
           { location: { contains: location, mode: "insensitive" } },
-          { location: { contains: `, ${abbrev}`, mode: "insensitive" } },
-          { location: { contains: `${abbrev},`, mode: "insensitive" } },
+          { location: { endsWith: `, ${abbrev}`, mode: "insensitive" } },
+          { location: { equals: abbrev, mode: "insensitive" } },
         ],
       });
     } else {
@@ -126,8 +128,9 @@ export function buildFilterWhere(filters: IncidentFilters): any {
 
 export async function getIncidents(filters: IncidentFilters = {}) {
   // When browsing by month (date filters set), show all results for that period
+  // When searching/filtering, show up to 200 results
   const hasDateFilter = !!(filters.dateFrom || filters.dateTo || filters.range);
-  const { page = 1, pageSize = hasDateFilter ? 500 : 50 } = filters;
+  const { page = 1, pageSize = hasDateFilter ? 500 : 200 } = filters;
   const where = buildFilterWhere(filters);
 
   const [incidents, total] = await Promise.all([
