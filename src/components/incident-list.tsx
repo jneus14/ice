@@ -533,17 +533,13 @@ function Pagination({ page, totalPages, total }: { page: number; totalPages: num
 
 function MonthNavigator({ compact = false }: { compact?: boolean }) {
   const searchParams = useSearchParams();
-  // Default to current month when no date filters in URL
   const now = new Date();
-  const defaultFrom = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const defaultLastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const defaultTo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(defaultLastDay).padStart(2, "0")}`;
   const hasSearchFilters = searchParams.get("q") || searchParams.get("tag") || searchParams.get("location") || searchParams.get("country") || searchParams.get("range") || searchParams.get("sourceType");
-  const currentFrom = searchParams.get("from") || (!hasSearchFilters ? defaultFrom : "");
-  const currentTo = searchParams.get("to") || (!hasSearchFilters ? defaultTo : "");
+  const currentFrom = searchParams.get("from") || "";
+  const currentTo = searchParams.get("to") || "";
 
   // Don't show month navigation when search/filter results span all dates
-  if (hasSearchFilters && !searchParams.get("from") && !searchParams.get("to")) {
+  if (hasSearchFilters && !currentFrom && !currentTo) {
     return null;
   }
 

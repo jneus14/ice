@@ -25,18 +25,9 @@ export default async function Home({
   const page = Number(params.page) || 1;
   const feed = (params.feed === "policy" ? "policy" : "incidents") as "incidents" | "policy";
 
-  // Default to current month when no date filters or search are set
-  let dateFrom = params.from as string | undefined;
-  let dateTo = params.to as string | undefined;
-  const hasSearchFilters = params.q || params.tag || params.location || params.country || params.range || params.sourceType;
-  if (!dateFrom && !dateTo && !hasSearchFilters) {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    dateFrom = `${y}-${String(m + 1).padStart(2, "0")}-01`;
-    const lastDay = new Date(y, m + 1, 0).getDate();
-    dateTo = `${y}-${String(m + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-  }
+  // Use date filters from URL if provided; otherwise show most recent incidents
+  const dateFrom = params.from as string | undefined;
+  const dateTo = params.to as string | undefined;
 
   const [{ incidents, total, pageSize }, countries, totalAll, mapIncidents, pendingIncidents] =
     await Promise.all([
