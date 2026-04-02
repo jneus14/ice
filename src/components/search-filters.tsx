@@ -123,7 +123,8 @@ export function SearchFilters({ countries }: { countries: string[] }) {
     currentLocation ||
     currentDateFrom ||
     currentDateTo ||
-    currentRange;
+    currentRange ||
+    searchParams.has("n");
 
   const updateFilters = useCallback(
     (updates: Record<string, string | string[] | null>) => {
@@ -251,6 +252,10 @@ export function SearchFilters({ countries }: { countries: string[] }) {
               from: null,
               to: null,
               range: null,
+              n: null,
+              s: null,
+              e: null,
+              w: null,
             })
           }
           disabled={!hasFilters}

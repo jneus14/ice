@@ -2,6 +2,10 @@ import { prisma } from "./db";
 import { SOURCE_TYPE_DOMAINS } from "./constants";
 
 export function parseFiltersFromParams(params: URLSearchParams): IncidentFilters {
+  const n = params.get("n"), s = params.get("s"), e = params.get("e"), w = params.get("w");
+  const bounds = n && s && e && w
+    ? { north: parseFloat(n), south: parseFloat(s), east: parseFloat(e), west: parseFloat(w) }
+    : undefined;
   return {
     search: params.get("q") || undefined,
     tags: params.getAll("tag").length > 0 ? params.getAll("tag") : undefined,
@@ -11,6 +15,7 @@ export function parseFiltersFromParams(params: URLSearchParams): IncidentFilters
     dateFrom: params.get("from") || undefined,
     dateTo: params.get("to") || undefined,
     range: params.get("range") || undefined,
+    bounds,
   };
 }
 
@@ -27,6 +32,7 @@ export type IncidentFilters = {
   range?: string;
   page?: number;
   pageSize?: number;
+  bounds?: { north: number; south: number; east: number; west: number };
 };
 
 function getDateCutoff(range: string): Date | null {
@@ -46,7 +52,7 @@ function getDateCutoff(range: string): Date | null {
 }
 
 export function buildFilterWhere(filters: IncidentFilters): any {
-  const { search, tags, tagMode = "all", sourceTypes, feed = "incidents", location, country, range, dateFrom, dateTo } = filters;
+  const { search, tags, tagMode = "all", sourceTypes, feed = "incidents", location, country, range, dateFrom, dateTo, bounds } = filters;
   const AND: any[] = [];
 
   if (search) {
@@ -149,6 +155,11 @@ export function buildFilterWhere(filters: IncidentFilters): any {
   }
   if (dateTo) {
     AND.push({ parsedDate: { lte: new Date(dateTo + "T23:59:59Z") } });
+  }
+
+  if (bounds) {
+    AND.push({ latitude: { gte: bounds.south, lte: bounds.north } });
+    AND.push({ longitude: { gte: bounds.west, lte: bounds.east } });
   }
 
   // Feed filter: separate incidents from policy/resources

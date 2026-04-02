@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type MapIncident = {
   id: number;
@@ -128,6 +129,56 @@ function DetailPanel({ inc, onClose }: { inc: MapIncident; onClose: () => void }
   );
 }
 
+const BOUNDS_ZOOM_THRESHOLD = 6;
+
+function MapBoundsSync() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track whether user has interacted with the map
+  const hasInteracted = useRef(false);
+
+  const map = useMapEvents({
+    moveend: () => {
+      // Skip the initial map load — only sync after user interaction
+      if (!hasInteracted.current) return;
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        const zoom = map.getZoom();
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("page");
+
+        if (zoom >= BOUNDS_ZOOM_THRESHOLD) {
+          const b = map.getBounds();
+          params.set("n", b.getNorth().toFixed(4));
+          params.set("s", b.getSouth().toFixed(4));
+          params.set("e", b.getEast().toFixed(4));
+          params.set("w", b.getWest().toFixed(4));
+        } else {
+          params.delete("n");
+          params.delete("s");
+          params.delete("e");
+          params.delete("w");
+        }
+
+        router.push(`/?${params.toString()}`);
+      }, 500);
+    },
+    zoomstart: () => { hasInteracted.current = true; },
+    dragstart: () => { hasInteracted.current = true; },
+  });
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return null;
+}
+
 export function MapInner({ incidents }: { incidents: MapIncident[] }) {
   const [selected, setSelected] = useState<MapIncident | null>(null);
 
@@ -149,6 +200,7 @@ export function MapInner({ incidents }: { incidents: MapIncident[] }) {
           opacity={0.55}
         />
         <MapClickHandler onMapClick={() => setSelected(null)} />
+        <MapBoundsSync />
 
         <MarkerClusterGroup
           iconCreateFunction={createClusterIcon}

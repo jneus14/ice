@@ -29,6 +29,15 @@ export default async function Home({
   const dateFrom = params.from as string | undefined;
   const dateTo = params.to as string | undefined;
 
+  // Parse map bounding box for geographic filtering
+  const n = params.n as string | undefined;
+  const s = params.s as string | undefined;
+  const e = params.e as string | undefined;
+  const w = params.w as string | undefined;
+  const bounds = n && s && e && w
+    ? { north: parseFloat(n), south: parseFloat(s), east: parseFloat(e), west: parseFloat(w) }
+    : undefined;
+
   const [{ incidents, total, pageSize }, countries, totalAll, mapIncidents, pendingIncidents] =
     await Promise.all([
       getIncidents({
@@ -43,6 +52,7 @@ export default async function Home({
         dateTo,
         range: params.range as string,
         page,
+        bounds,
       }),
       getDistinctCountries(),
       getTotalWithHeadline({
@@ -53,6 +63,7 @@ export default async function Home({
         feed,
         location: params.location as string,
         country: params.country as string,
+        bounds,
       }),
       getMapIncidents({
         search: params.q as string,
@@ -62,6 +73,7 @@ export default async function Home({
         feed,
         location: params.location as string,
         country: params.country as string,
+        bounds,
       }),
       getPendingIncidents(),
     ]);
