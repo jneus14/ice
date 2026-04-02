@@ -162,7 +162,7 @@ function MapBoundsSync() {
           params.delete("w");
         }
 
-        router.push(`/?${params.toString()}`);
+        router.push(`/?${params.toString()}`, { scroll: false });
       }, 500);
     },
     zoomstart: () => { hasInteracted.current = true; },

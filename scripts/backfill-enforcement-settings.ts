@@ -16,7 +16,7 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const BATCH_SIZE = 25;
 
 const SETTING_TAGS = [
-  "Court/USCIS",
+  "Court/USCIS/Immigration Office",
   "Airport",
   "Workplace",
   "School",
@@ -24,8 +24,8 @@ const SETTING_TAGS = [
   "Hospital/Medical",
   "Home/Residence",
   "Jail/Prison",
+  "Vehicle/Traffic Stop",
   "Public Space/Street",
-  "Immigration Office",
   "Shelter",
 ] as const;
 
@@ -53,7 +53,7 @@ async function classifyBatch(
   const prompt = `You are reviewing immigration enforcement incidents. For each incident below, identify WHERE the enforcement action took place based on the headline and summary.
 
 ENFORCEMENT SETTING tags — apply only when clearly indicated:
-- "Court/USCIS": Arrest at or near a courthouse, during a court hearing, or while attending court
+- "Court/USCIS/Immigration Office": Arrest at or near a courthouse, during a court hearing, while attending court, during an immigration check-in, at an ICE/USCIS office, or during a scheduled appointment
 - "Airport": Arrest or detention at an airport, during travel, or at a port of entry
 - "Workplace": Arrest at a workplace, during a workplace raid, or job site
 - "School": Arrest at or near a school, college, university, or while dropping off/picking up children
@@ -61,15 +61,15 @@ ENFORCEMENT SETTING tags — apply only when clearly indicated:
 - "Hospital/Medical": Arrest at or near a hospital, clinic, medical facility, or while seeking medical care
 - "Home/Residence": Arrest at someone's home, residence, apartment, or while answering the door
 - "Jail/Prison": ICE detainer or pickup from local jail, prison, or after release from criminal custody
+- "Vehicle/Traffic Stop": Arrest during a traffic stop or vehicle checkpoint
 - "Public Space/Street": Arrest on the street, in a park, parking lot, store, or other public place
-- "Immigration Office": Arrest during an immigration check-in, at an ICE/USCIS office, or during a scheduled appointment
 - "Shelter": Arrest at or near a migrant shelter, homeless shelter, or temporary housing facility
 
 Be conservative. Only apply when the setting is clearly stated or strongly implied. Many incidents won't have a clear setting — return an empty array for those.
 
 Return a JSON object where keys are incident IDs (as strings) and values are arrays of applicable setting tags. Only include incidents where at least one tag applies. Return ONLY the JSON object.
 
-Example: {"123": ["Court/USCIS"], "456": ["Home/Residence", "Public Space/Street"]}
+Example: {"123": ["Court/USCIS/Immigration Office"], "456": ["Home/Residence", "Public Space/Street"]}
 
 INCIDENTS:
 ${incidentText}`;

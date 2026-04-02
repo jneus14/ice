@@ -37,7 +37,7 @@ export const PERSON_IMPACTED_TAGS = [
 ] as const;
 
 export const ENFORCEMENT_SETTING_TAGS = [
-  { value: "Court/USCIS", label: "Court/USCIS" },
+  { value: "Court/USCIS/Immigration Office", label: "Court/USCIS/Immigration Office" },
   { value: "Airport", label: "Airport" },
   { value: "Workplace", label: "Workplace" },
   { value: "School", label: "School" },
@@ -47,7 +47,6 @@ export const ENFORCEMENT_SETTING_TAGS = [
   { value: "Jail/Prison", label: "Jail/Prison" },
   { value: "Vehicle/Traffic Stop", label: "Vehicle/Traffic Stop" },
   { value: "Public Space/Street", label: "Public Space/Street" },
-  { value: "Immigration Office", label: "Immigration Office" },
   { value: "Shelter", label: "Shelter" },
 ] as const;
 

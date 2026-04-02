@@ -149,7 +149,7 @@ const en: T = {
       "Visa / Legal Status": "Visa/Legal Status",
     },
     enforcementSettings: {
-      "Court/USCIS": "Court/USCIS",
+      "Court/USCIS/Immigration Office": "Court/USCIS/Immigration Office",
       "Airport": "Airport",
       "Workplace": "Workplace",
       "School": "School",
@@ -159,7 +159,6 @@ const en: T = {
       "Jail/Prison": "Jail/Prison",
       "Vehicle/Traffic Stop": "Vehicle/Traffic Stop",
       "Public Space/Street": "Public Space/Street",
-      "Immigration Office": "Immigration Office",
       "Shelter": "Shelter",
     },
     sourceTypes: {
@@ -257,7 +256,7 @@ const es: T = {
       "Visa / Legal Status": "Visa/Estatus migratorio",
     },
     enforcementSettings: {
-      "Court/USCIS": "Tribunal/USCIS",
+      "Court/USCIS/Immigration Office": "Tribunal/USCIS/Oficina de inmigración",
       "Airport": "Aeropuerto",
       "Workplace": "Lugar de trabajo",
       "School": "Escuela",
@@ -267,7 +266,6 @@ const es: T = {
       "Jail/Prison": "Cárcel/Prisión",
       "Vehicle/Traffic Stop": "Vehículo/Parada de tráfico",
       "Public Space/Street": "Espacio público/Calle",
-      "Immigration Office": "Oficina de inmigración",
       "Shelter": "Refugio",
     },
     sourceTypes: {
