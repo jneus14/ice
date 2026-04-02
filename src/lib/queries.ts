@@ -279,6 +279,8 @@ export async function getPendingIncidents() {
       imageUrl: true,
       timeline: true,
       approved: true,
+      duplicateOfId: true,
+      lastCombinedAt: true,
     },
   });
 }

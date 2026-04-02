@@ -19,6 +19,8 @@ type Incident = {
   imageUrl: string | null;
   timeline: string | null;
   approved?: boolean;
+  duplicateOfId?: number | null;
+  lastCombinedAt?: Date | string | null;
 };
 
 type TranslationMap = Record<number, { headline: string | null }>;

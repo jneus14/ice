@@ -35,6 +35,7 @@ type Incident = {
   reviewedP?: boolean;
   excludePoster?: boolean;
   lastCombinedAt?: Date | string | null;
+  duplicateOfId?: number | null;
 };
 
 type CombineCandidate = {
@@ -826,6 +827,26 @@ export function IncidentCard({
                   </span>
                 ) : null;
               })()}
+              {incident.duplicateOfId && !incident.approved && (
+                <span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-orange-100 text-orange-700 border border-orange-200">
+                  ⚠ Matches existing #{incident.duplicateOfId}
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!confirm(`Merge this into incident #${incident.duplicateOfId}?`)) return;
+                      await fetch(`/api/incidents/${incident.id}/combine`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "x-edit-password": "acab" },
+                        body: JSON.stringify({ existingId: incident.duplicateOfId }),
+                      });
+                      router.refresh();
+                    }}
+                    className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors cursor-pointer"
+                  >
+                    Merge
+                  </button>
+                </span>
+              )}
               <label
                 className="flex items-center gap-0.5 cursor-pointer"
                 onClick={(e) => e.stopPropagation()}
