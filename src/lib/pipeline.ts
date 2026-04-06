@@ -105,6 +105,9 @@ async function fallbackViaExa(
     const finalLocation = incident.location || extracted.location;
     const parsedDate = parseIncidentDate(finalDate);
 
+    // Reject incidents dated before January 2025
+    if (parsedDate && parsedDate < new Date("2025-01-01")) return false;
+
     let latitude = incident.latitude;
     let longitude = incident.longitude;
     if (!latitude && !longitude && finalLocation) {
@@ -176,6 +179,18 @@ export async function processIncidentPipeline(incidentId: number) {
 
     // Parse date string into a real Date
     const parsedDate = parseIncidentDate(finalDate);
+
+    // Reject incidents dated before January 2025
+    if (parsedDate && parsedDate < new Date("2025-01-01")) {
+      await prisma.incident.update({
+        where: { id: incidentId },
+        data: {
+          status: "FAILED",
+          errorMessage: "Incident predates January 2025",
+        },
+      });
+      return;
+    }
 
     // Geocode location if we don't already have coordinates
     let latitude = incident.latitude;

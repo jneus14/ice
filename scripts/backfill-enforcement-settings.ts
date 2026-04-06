@@ -23,10 +23,9 @@ const SETTING_TAGS = [
   "Church/Place of Worship",
   "Hospital/Medical",
   "Home/Residence",
-  "Jail/Prison",
+  "Criminal/Detainer",
   "Vehicle/Traffic Stop",
   "Public Space/Street",
-  "Shelter",
 ] as const;
 
 type SettingTag = (typeof SETTING_TAGS)[number];
@@ -60,10 +59,10 @@ ENFORCEMENT SETTING tags — apply only when clearly indicated:
 - "Church/Place of Worship": Arrest at or near a church, mosque, synagogue, or other place of worship, or at a faith-based shelter
 - "Hospital/Medical": Arrest at or near a hospital, clinic, medical facility, or while seeking medical care
 - "Home/Residence": Arrest at someone's home, residence, apartment, or while answering the door
-- "Jail/Prison": ICE detainer or pickup from local jail, prison, or after release from criminal custody
+- "Criminal/Detainer": ICE detainer placed on someone in local/state custody, person turned over to ICE by police/sheriff, or local law enforcement colluding with ICE to facilitate arrest
 - "Vehicle/Traffic Stop": Arrest during a traffic stop or vehicle checkpoint
 - "Public Space/Street": Arrest on the street, in a park, parking lot, store, or other public place
-- "Shelter": Arrest at or near a migrant shelter, homeless shelter, or temporary housing facility
+
 
 Be conservative. Only apply when the setting is clearly stated or strongly implied. Many incidents won't have a clear setting — return an empty array for those.
 

@@ -29,10 +29,9 @@ const ENFORCEMENT_TAGS = [
   "Church/Place of Worship",
   "Hospital/Medical",
   "Home/Residence",
-  "Jail/Prison",
+  "Criminal/Detainer",
   "Vehicle/Traffic Stop",
   "Public Space/Street",
-  "Shelter",
 ] as const;
 
 const enforcementSet = new Set<string>(ENFORCEMENT_TAGS);
@@ -64,7 +63,7 @@ async function pickBestSetting(
 RULES:
 - Pick exactly ONE enforcement setting per incident, or "none" if none of the current tags are accurate.
 - "Hospital/Medical": ONLY use if the enforcement action (arrest/detention) happened AT a hospital or medical facility. If the person was arrested elsewhere and later ended up in a hospital, do NOT use Hospital/Medical — use the setting where they were actually arrested.
-- "Jail/Prison": ONLY use if ICE picked up the person via a detainer after they served a criminal sentence, or if local law enforcement turned them over to ICE. Do NOT use if the person was simply booked into jail after being arrested by ICE at another location.
+- "Criminal/Detainer": ONLY use if ICE placed a detainer on someone in local/state custody, or if local law enforcement turned them over to ICE. Do NOT use for people held in immigration detention or booked into jail after an ICE arrest.
 - Focus on WHERE the initial encounter/arrest took place, not where the person ended up afterward.
 - "Vehicle/Traffic Stop" vs "Public Space/Street": Use Vehicle/Traffic Stop only if there was an actual traffic stop. Use Public Space/Street for parking lots, stores, streets where the person was approached on foot.
 
@@ -76,10 +75,10 @@ ENFORCEMENT SETTINGS:
 - "Church/Place of Worship": Church, mosque, synagogue, faith-based shelter
 - "Hospital/Medical": Hospital, clinic, medical facility (only if arrested THERE)
 - "Home/Residence": Home, residence, apartment
-- "Jail/Prison": ICE detainer pickup from jail/prison, turned over by law enforcement
+- "Criminal/Detainer": ICE detainer placed on someone in local/state custody, turned over to ICE by police/sheriff
 - "Vehicle/Traffic Stop": Traffic stop, vehicle checkpoint
 - "Public Space/Street": Street, park, parking lot, store, public place
-- "Shelter": Migrant shelter, homeless shelter, temporary housing
+
 
 Return a JSON object where keys are incident IDs (as strings) and values are the single best tag (a string), or "none" if no tag fits. Return ONLY the JSON object.
 

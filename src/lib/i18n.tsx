@@ -147,6 +147,7 @@ const en: T = {
       "Protester/Intervenor": "Protester/Intervenor",
       "U.S. Citizen": "U.S. Citizen",
       "Visa / Legal Status": "Visa/Legal Status",
+      "Military": "Military",
     },
     enforcementSettings: {
       "Court/USCIS/Immigration Office": "Court/USCIS/Immigration Office",
@@ -156,10 +157,9 @@ const en: T = {
       "Church/Place of Worship": "Church/Place of Worship",
       "Hospital/Medical": "Hospital/Medical",
       "Home/Residence": "Home/Residence",
-      "Jail/Prison": "Jail/Prison",
+      "Criminal/Detainer": "Criminal/Detainer",
       "Vehicle/Traffic Stop": "Vehicle/Traffic Stop",
       "Public Space/Street": "Public Space/Street",
-      "Shelter": "Shelter",
     },
     sourceTypes: {
       "social-media": "Social Media",
@@ -254,6 +254,7 @@ const es: T = {
       "Protester/Intervenor": "Manifestante/Interventor",
       "U.S. Citizen": "Ciudadano/a de EE.UU.",
       "Visa / Legal Status": "Visa/Estatus migratorio",
+      "Military": "Militar",
     },
     enforcementSettings: {
       "Court/USCIS/Immigration Office": "Tribunal/USCIS/Oficina de inmigración",
@@ -263,10 +264,9 @@ const es: T = {
       "Church/Place of Worship": "Iglesia/Lugar de culto",
       "Hospital/Medical": "Hospital/Centro médico",
       "Home/Residence": "Hogar/Residencia",
-      "Jail/Prison": "Cárcel/Prisión",
+      "Criminal/Detainer": "Criminal/Detención",
       "Vehicle/Traffic Stop": "Vehículo/Parada de tráfico",
       "Public Space/Street": "Espacio público/Calle",
-      "Shelter": "Refugio",
     },
     sourceTypes: {
       "social-media": "Redes sociales",

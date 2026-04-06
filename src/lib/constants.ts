@@ -34,6 +34,7 @@ export const PERSON_IMPACTED_TAGS = [
   { value: "Protester/Intervenor", label: "Protester/Intervenor" },
   { value: "Palestine Advocate", label: "Palestine Advocate" },
   { value: "Visa / Legal Status", label: "Visa/Legal Status" },
+  { value: "Military", label: "Military" },
 ] as const;
 
 export const ENFORCEMENT_SETTING_TAGS = [
@@ -44,10 +45,9 @@ export const ENFORCEMENT_SETTING_TAGS = [
   { value: "Church/Place of Worship", label: "Church/Place of Worship" },
   { value: "Hospital/Medical", label: "Hospital/Medical" },
   { value: "Home/Residence", label: "Home/Residence" },
-  { value: "Jail/Prison", label: "Jail/Prison" },
+  { value: "Criminal/Detainer", label: "Criminal/Detainer" },
   { value: "Vehicle/Traffic Stop", label: "Vehicle/Traffic Stop" },
   { value: "Public Space/Street", label: "Public Space/Street" },
-  { value: "Shelter", label: "Shelter" },
 ] as const;
 
 // Combined flat list for backwards compat (admin, queries, etc.)

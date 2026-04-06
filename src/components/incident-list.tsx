@@ -313,7 +313,7 @@ function PendingSection({
             </div>
             {clusterIncidents_.map((incident) => (
               <div key={incident.id} className="flex items-start">
-                <div className="pt-6 pl-3 pr-2 shrink-0">
+                <div className="pt-12 pl-3 pr-2 shrink-0">
                   <input
                     type="checkbox"
                     checked={pendingSelected.has(incident.id)}
@@ -349,7 +349,7 @@ function PendingSection({
           </div>
           {unclustered.map((incident) => (
             <div key={incident.id} className="flex items-start">
-              <div className="pt-6 pl-3 pr-0 shrink-0">
+              <div className="pt-12 pl-3 pr-0 shrink-0">
                 <input
                   type="checkbox"
                   checked={pendingSelected.has(incident.id)}
