@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { SOURCE_TYPE_DOMAINS } from "./constants";
+import { isSocialOnly } from "./sources";
 
 export function parseFiltersFromParams(params: URLSearchParams): IncidentFilters {
   const n = params.get("n"), s = params.get("s"), e = params.get("e"), w = params.get("w");
@@ -33,6 +34,8 @@ export type IncidentFilters = {
   page?: number;
   pageSize?: number;
   bounds?: { north: number; south: number; east: number; west: number };
+  /** When true, exclude incidents whose only sources are social media. Default: true. */
+  hideSocialOnly?: boolean;
 };
 
 function getDateCutoff(range: string): Date | null {
@@ -192,38 +195,69 @@ export function buildFilterWhere(filters: IncidentFilters): any {
   return { AND };
 }
 
+const incidentSelect = {
+  id: true,
+  url: true,
+  altSources: true,
+  date: true,
+  location: true,
+  headline: true,
+  summary: true,
+  incidentType: true,
+  country: true,
+  imageUrl: true,
+  timeline: true,
+  approved: true,
+  reviewedA: true,
+  reviewedJ: true,
+  reviewedP: true,
+  excludePoster: true,
+  lastCombinedAt: true,
+} as const;
+
 export async function getIncidents(filters: IncidentFilters = {}) {
-  const { page = 1, pageSize = 50 } = filters;
+  const { page = 1, pageSize = 50, hideSocialOnly = true } = filters;
   const where = buildFilterWhere(filters);
 
-  const [incidents, total] = await Promise.all([
-    prisma.incident.findMany({
-      where,
-      orderBy: [{ parsedDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        url: true,
-        altSources: true,
-        date: true,
-        location: true,
-        headline: true,
-        summary: true,
-        incidentType: true,
-        country: true,
-        imageUrl: true,
-        timeline: true,
-        approved: true,
-        reviewedA: true,
-        reviewedJ: true,
-        reviewedP: true,
-        excludePoster: true,
-        lastCombinedAt: true,
-      },
-    }),
-    prisma.incident.count({ where }),
-  ]);
+  // Fast path: no social-only filtering — use SQL pagination + count.
+  if (!hideSocialOnly) {
+    const [incidents, total] = await Promise.all([
+      prisma.incident.findMany({
+        where,
+        orderBy: [{ parsedDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: incidentSelect,
+      }),
+      prisma.incident.count({ where }),
+    ]);
+    return { incidents, total, page, pageSize };
+  }
+
+  // Social-only filter is applied in JS (the JSON-encoded altSources field
+  // can't be evaluated reliably in SQL). Two-step approach:
+  //   1) Fetch lightweight (id+sources) of all matching incidents in order
+  //   2) Filter, slice the page, then load full rows for the page IDs.
+  const all = await prisma.incident.findMany({
+    where,
+    orderBy: [{ parsedDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    select: { id: true, url: true, altSources: true },
+  });
+  const visible = all.filter((i) => !isSocialOnly(i.url, i.altSources));
+  const total = visible.length;
+  const pageIds = visible.slice((page - 1) * pageSize, page * pageSize).map((i) => i.id);
+
+  if (pageIds.length === 0) {
+    return { incidents: [], total, page, pageSize };
+  }
+
+  const rows = await prisma.incident.findMany({
+    where: { id: { in: pageIds } },
+    select: incidentSelect,
+  });
+  // Preserve original order from `visible` (Prisma doesn't honor ID order on `in`)
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const incidents = pageIds.map((id) => byId.get(id)!).filter(Boolean);
 
   return { incidents, total, page, pageSize };
 }
@@ -232,16 +266,25 @@ export async function getTotalWithHeadline(filters: IncidentFilters = {}): Promi
   // Count across all months (no date filter), but respect other filters
   const { dateFrom: _, dateTo: __, range: ___, page: ____, ...rest } = filters;
   const where = buildFilterWhere(rest);
-  return prisma.incident.count({ where });
+
+  if (rest.hideSocialOnly === false) {
+    return prisma.incident.count({ where });
+  }
+  const all = await prisma.incident.findMany({
+    where,
+    select: { url: true, altSources: true },
+  });
+  return all.filter((i) => !isSocialOnly(i.url, i.altSources)).length;
 }
 
 export async function getMapIncidents(filters: IncidentFilters = {}) {
+  const { hideSocialOnly = true } = filters;
   const where = buildFilterWhere(filters);
   // Also require coordinates for map display
   where.AND.push({ latitude: { not: null } });
   where.AND.push({ longitude: { not: null } });
 
-  return prisma.incident.findMany({
+  const rows = await prisma.incident.findMany({
     where,
     select: {
       id: true,
@@ -256,6 +299,8 @@ export async function getMapIncidents(filters: IncidentFilters = {}) {
       altSources: true,
     },
   });
+  if (!hideSocialOnly) return rows;
+  return rows.filter((i) => !isSocialOnly(i.url, i.altSources));
 }
 
 export async function getPendingIncidents() {

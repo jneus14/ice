@@ -24,6 +24,8 @@ export default async function Home({
 
   const page = Number(params.page) || 1;
   const feed = (params.feed === "policy" ? "policy" : "incidents") as "incidents" | "policy";
+  // Default: hide incidents whose only sources are social media. ?showSocial=1 includes them.
+  const hideSocialOnly = params.showSocial !== "1";
 
   // Use date filters from URL if provided; otherwise show most recent incidents
   const dateFrom = params.from as string | undefined;
@@ -53,6 +55,7 @@ export default async function Home({
         range: params.range as string,
         page,
         bounds,
+        hideSocialOnly,
       }),
       getDistinctCountries(),
       getTotalWithHeadline({
@@ -64,6 +67,7 @@ export default async function Home({
         location: params.location as string,
         country: params.country as string,
         bounds,
+        hideSocialOnly,
       }),
       getMapIncidents({
         search: params.q as string,
@@ -74,6 +78,7 @@ export default async function Home({
         location: params.location as string,
         country: params.country as string,
         bounds,
+        hideSocialOnly,
       }),
       getPendingIncidents(),
     ]);

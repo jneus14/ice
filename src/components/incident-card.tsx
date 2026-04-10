@@ -2,7 +2,7 @@
 
 import { useState, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { parseAltSources } from "@/lib/sources";
+import { parseAltSources, SOCIAL_HOSTS } from "@/lib/sources";
 import { INCIDENT_TYPE_TAGS, PERSON_IMPACTED_TAGS, ENFORCEMENT_SETTING_TAGS } from "@/lib/constants";
 import { useLanguage } from "@/lib/i18n";
 
@@ -128,8 +128,6 @@ const SOURCE_NAMES: Record<string, string> = {
   "x.com": "Twitter/X",
   "facebook.com": "Facebook",
 };
-
-const SOCIAL_HOSTS = new Set(["instagram.com", "facebook.com", "tiktok.com", "twitter.com", "x.com"]);
 
 function getSourceName(url: string): string {
   try {

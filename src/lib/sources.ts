@@ -1,4 +1,42 @@
 /**
+ * Hosts considered "social media" for the purposes of source classification.
+ * If an incident's only sources are from these hosts, it's hidden from the
+ * main feed by default.
+ */
+export const SOCIAL_HOSTS = new Set<string>([
+  "instagram.com",
+  "facebook.com",
+  "tiktok.com",
+  "twitter.com",
+  "x.com",
+  "bsky.app",
+  "bsky.social",
+]);
+
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+export function isSocialUrl(url: string): boolean {
+  const host = hostOf(url);
+  return host !== null && SOCIAL_HOSTS.has(host);
+}
+
+/**
+ * True when every source URL on an incident is a social media link.
+ * Used to hide such incidents from the main feed by default.
+ */
+export function isSocialOnly(url: string, altSources: string | null): boolean {
+  const all = [url, ...parseAltSources(altSources)].filter(Boolean);
+  if (all.length === 0) return false;
+  return all.every(isSocialUrl);
+}
+
+/**
  * Parse the altSources DB field into an array of URLs.
  * Handles: JSON array string, legacy single URL string.
  */
