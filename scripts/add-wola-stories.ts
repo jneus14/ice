@@ -123,8 +123,8 @@ async function main() {
 }
 
 Available tags (use only from this list):
-INCIDENT TYPE: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, Court Order Violation, Litigation, 3rd Country Deportation, Disappearance/Detention
-ENFORCEMENT SETTING (pick at most ONE): Court/USCIS/Immigration Office, Airport, Vehicle/Traffic Stop, Workplace, School, Church/Place of Worship, Hospital/Medical, Home/Residence, Jail/Prison, Public Space/Street, Shelter
+INCIDENT TYPE: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Order Violation, Litigation, 3rd Country Deportation, Disappearance/Detention
+ENFORCEMENT SETTING (where the enforcement action took place, if mentioned): Court/USCIS/Immigration Office, Airport, Vehicle/Traffic Stop, Workplace, School, Church/Place of Worship, Hospital/Medical, Home/Residence, Criminal/Detainer, Public Space/Street
 PERSON IMPACTED: DACA/Dreamer, LGBTQ+, LPR/Greencard, Minor, Refugee/Asylum Seeker, Student, U.S. Citizen, Protester/Intervenor
 
 Article:

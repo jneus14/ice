@@ -33,17 +33,24 @@ async function geocodeLocation(location: string) {
 }
 
 const STORIES_TO_SEARCH = [
-  "Supreme Court birthright citizenship arguments Trump April 2026",
-  "Emmanuel Dumas funeral immigration custody death New York Times 2026",
-  "Rohingya refugee death ruled homicide Border Patrol New York officials 2026 Reuters",
-  "Maryland roofing workers ICE arrest unpaid wages Migrant Insider 2026",
-  "DACA recipient detained leaving home breastmilk newborn NICU Spectrum News 2026",
-  "DNA database missing migrants nonprofit dissolved Border Chronicle 2026",
-  "USCIS social media handles citizenship visa Federal Register 2026",
-  "South Sudan student Duke University visa revoked Wall Street Journal 2026",
-  "Texas professional license immigration status proof Texas Tribune 2026",
-  "government shutdown DHS Homeland Security Republican agreement April 2026",
-  "UC Irvine professor Stockholm Prize criminology immigration San Francisco Chronicle 2026",
+  "Minnesota hospital workers sedated bipolar man ICE custody Sahan Journal 2026",
+  "ICE violating guidelines pregnant women New York Times investigation 2026",
+  "ICE temporary holding spaces long past time allowed Colorado Times Recorder 2026",
+  "California bill limit markup products sold ICE detention centers Sierra Sun Times 2026",
+  "Baker County Detention Center Florida TikTok video conditions women ICE 2026",
+  "Guatemalan man permanent residency US citizen wife children ICE custody Miami Herald 2026",
+  "ICE field offices Miami Dallas Atlanta San Antonio most arrests 2025 New York Times",
+  "ICE raids construction businesses South Texas New York Times video 2026",
+  "federal judge blocked Trump detaining refugees one year Reuters 2026",
+  "animal rescue pets left behind immigration detained deported owners New York Times 2026",
+  "ICE chased wrong person Vermont raid car crash busting home Vermont Public 2026",
+  "Board of Immigration Appeals changes Trump administration sides DHS NPR 2026",
+  "San Diego County immigration legal services funding shortage Union-Tribune 2026",
+  "Department of Justice dismantled program free legal support immigrants CBS News 2026",
+  "Minnesota sued Trump investigation documents Renee Good Alex Pretti POLITICO 2026",
+  "Gregory Bovino Border Patrol retiring Associated Press 2026",
+  "military presence border no impact crossings Border Chronicle War Horse 2026",
+  "Arizona twins father deportation music Arizona Republic 2026",
 ];
 
 async function main() {
@@ -116,8 +123,8 @@ async function main() {
 }
 
 Available tags (use only from this list):
-INCIDENT TYPE: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, Court Order Violation, Litigation, 3rd Country Deportation, Disappearance/Detention
-ENFORCEMENT SETTING (pick at most ONE): Court/USCIS/Immigration Office, Airport, Vehicle/Traffic Stop, Workplace, School, Church/Place of Worship, Hospital/Medical, Home/Residence, Jail/Prison, Public Space/Street, Shelter
+INCIDENT TYPE: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Order Violation, Litigation, 3rd Country Deportation, Disappearance/Detention
+ENFORCEMENT SETTING (where the enforcement action took place, if mentioned): Court/USCIS/Immigration Office, Airport, Vehicle/Traffic Stop, Workplace, School, Church/Place of Worship, Hospital/Medical, Home/Residence, Criminal/Detainer, Public Space/Street
 PERSON IMPACTED: DACA/Dreamer, LGBTQ+, LPR/Greencard, Minor, Refugee/Asylum Seeker, Student, U.S. Citizen, Protester/Intervenor
 
 Article:

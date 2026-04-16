@@ -2,7 +2,7 @@
 
 import { useState, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { parseAltSources, SOCIAL_HOSTS } from "@/lib/sources";
+import { parseAltSources, SOCIAL_HOSTS, isSocialOnly } from "@/lib/sources";
 import { INCIDENT_TYPE_TAGS, PERSON_IMPACTED_TAGS, ENFORCEMENT_SETTING_TAGS } from "@/lib/constants";
 import { useLanguage } from "@/lib/i18n";
 
@@ -552,6 +552,7 @@ export function IncidentCard({
   // Best source to show prominently = first non-social URL
   const primarySource = allSources.find((s) => !isSocial(s)) ?? allSources[0];
   const hasMeta = incident.date || incident.location || incident.country;
+  const socialOnly = isSocialOnly(incident.url, incident.altSources);
 
   async function handleSave() {
     setSaving(true);
@@ -968,6 +969,17 @@ export function IncidentCard({
                   >
                     +{allSources.length - 1}
                   </button>
+                )}
+                {socialOnly && (
+                  <span
+                    className="inline-flex items-center gap-1 px-1.5 py-0 text-[0.65rem] font-semibold rounded-full bg-pink-100 text-pink-700 leading-[1.4]"
+                    title="This incident has only been reported on social media. Corroborating news sources have not yet been identified."
+                  >
+                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Social Media (corroborating sources not yet identified)
+                  </span>
                 )}
               </div>
               {sourcesExpanded && allSources.length > 1 && (

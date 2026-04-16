@@ -24,8 +24,8 @@ export default async function Home({
 
   const page = Number(params.page) || 1;
   const feed = (params.feed === "policy" ? "policy" : "incidents") as "incidents" | "policy";
-  // Default: hide incidents whose only sources are social media. ?showSocial=1 includes them.
-  const hideSocialOnly = params.showSocial !== "1";
+  // Social-only incidents are always included in the feed and marked with a banner.
+  const hideSocialOnly = false;
 
   // Use date filters from URL if provided; otherwise show most recent incidents
   const dateFrom = params.from as string | undefined;

@@ -40,7 +40,7 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
   "date": "The date of the incident in M/D/YYYY format if available, otherwise null",
   "location": "City, State abbreviation (e.g. 'St. Paul, MN' or 'Chicago, IL'). MUST be the specific city/town name, NEVER use the full state name (e.g. 'Minnesota, MN' is WRONG). If no specific city is mentioned, use the county or region. If only a state is known, use just the state abbreviation (e.g. 'TX'). Null if unavailable.",
   "summary": "A 2-4 sentence factual summary of what happened",
-  "incidentType": "Comma-separated tags from ONLY these options. INCIDENT TYPE: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Process Issue, Court Order Violation, Litigation, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention, Military. ENFORCEMENT SETTING (where the enforcement action took place, if mentioned): Court/USCIS/Immigration Office, Airport, Vehicle/Traffic Stop, Workplace, School, Church/Place of Worship, Hospital/Medical, Home/Residence, Criminal/Detainer, Public Space/Street",
+  "incidentType": "Comma-separated tags from ONLY these options. INCIDENT TYPE: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Order Violation, Litigation, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention, Military. ENFORCEMENT SETTING (where the enforcement action took place, if mentioned): Court/USCIS/Immigration Office, Airport, Vehicle/Traffic Stop, Workplace, School, Church/Place of Worship, Hospital/Medical, Home/Residence, Criminal/Detainer, Public Space/Street",
   "country": "Country of origin of the affected person if mentioned, otherwise null"
 }
 
@@ -59,9 +59,21 @@ Rules:
   - "Native American": ONLY for U.S. Native Americans (members of federally recognized tribes, e.g. Navajo, Oglala Sioux, Cherokee).
   - "Indigenous (Non-U.S.)": for indigenous people from other countries (e.g. indigenous Mexicans, Guatemalan Mayans, etc.).
   - "Visa / Legal Status": ONLY for people who had a VALID, current visa or legal status at the time they were detained/deported (e.g. valid work visa, valid student visa, valid tourist visa, green card holders with valid status). Do NOT use for people who overstayed their visa, had expired status, or were undocumented. Overstaying a visa means they NO LONGER have valid status. Use "LPR" instead for lawful permanent residents (green card holders).
-  - "Court Order Violation": for stories where the Trump administration, ICE, CBP, or other federal agencies defy, ignore, or violate a court order — e.g. deporting someone despite a judge's stay, refusing to comply with an injunction, or continuing a practice a court has ordered stopped. Use alongside other tags as appropriate.
+  - "Court Order Violation": ONLY when the federal government (Trump administration, ICE, CBP, DOJ, etc.) defies, ignores, or violates a court order — e.g. deporting someone despite a judge's stay, refusing to comply with an injunction, or continuing a practice a court has ordered stopped. Do NOT use when a court merely issues an order, when someone is released or protected because of a court order, or when the government complies with a court ruling. The violation must be by the government, not by a private party. Use alongside other tags as appropriate.
   - "Litigation": for stories that mention decisions, rulings, or orders by judges in U.S. courts related to immigration enforcement — e.g. a judge ordering someone's release, blocking a deportation, ruling on detention conditions, issuing injunctions against ICE, or ruling on constitutional challenges to enforcement actions. Use alongside other tags as appropriate.
   - "Vigilante": ONLY for non-government actors — civilians impersonating ICE agents, bounty hunters, or vigilantes targeting immigrants. Do NOT use for real ICE/CBP agents using deceptive tactics (false pretenses, unmarked vehicles, fake stories) — those are "Officer Misconduct".
+- ENFORCEMENT SETTING — ALWAYS include an enforcement setting tag if the location of the arrest/detention is mentioned. Apply based on WHERE the person was physically taken into custody (the "first instance" of enforcement):
+  - "Court/USCIS/Immigration Office": arrested at immigration court, ICE check-in/appointment, USCIS interview, courthouse, or field office. Includes arrests at scheduled check-ins, interviews, hearings, or in the courthouse/office lobby or parking lot.
+  - "Airport": arrested at or entering/exiting an airport.
+  - "Vehicle/Traffic Stop": arrested during or as result of a traffic stop, pulled over while driving.
+  - "Workplace": arrested at job site, restaurant where they work, construction site, farm, Home Depot pickup spot, etc.
+  - "School": arrested at or outside a school, daycare, university.
+  - "Church/Place of Worship": arrested at a church, mosque, synagogue, religious institution.
+  - "Hospital/Medical": arrested AT a hospital, clinic, or medical facility (or just outside entering/exiting). Do NOT use when person is merely hospitalized AFTER arrest or dies in hospital after detention.
+  - "Home/Residence": arrested at their home, apartment, or residence.
+  - "Criminal/Detainer": transferred to ICE from local jail/prison, taken into custody via criminal detainer after serving sentence or during criminal proceedings.
+  - "Public Space/Street": arrested on street, sidewalk, parking lot (not workplace/medical/etc.), in public park, store, or other general public location. Use this as the default public-location setting when none of the more specific settings apply.
+  - You may include MULTIPLE enforcement settings if applicable (e.g. "Vehicle/Traffic Stop, Criminal/Detainer" if pulled over then transferred from jail).
 - If you cannot determine a field, set it to null.
 - The summary should be strictly factual and neutral in tone. Describe only what happened — do not editorialize, assess significance, or use conclusory language.
 - Do NOT use phrases like "became a symbol of," "drew national attention," "highlighted the human cost of," "raised questions about," or similar embellishments. Just state the facts.
@@ -134,14 +146,74 @@ export async function extractFromText(
 
   const parsed = JSON.parse(jsonStr);
 
+  const incidentType = inferEnforcementSetting(
+    parsed.incidentType || null,
+    parsed.summary || null,
+    parsed.headline || null,
+  );
+
   return {
     headline: parsed.headline || null,
     date: parsed.date || null,
     location: parsed.location || null,
     summary: parsed.summary || null,
-    incidentType: parsed.incidentType || null,
+    incidentType,
     country: parsed.country || null,
   };
+}
+
+const ENFORCEMENT_SETTINGS = [
+  "Court/USCIS/Immigration Office",
+  "Airport",
+  "Vehicle/Traffic Stop",
+  "Workplace",
+  "School",
+  "Church/Place of Worship",
+  "Hospital/Medical",
+  "Home/Residence",
+  "Criminal/Detainer",
+  "Public Space/Street",
+];
+
+/**
+ * If the AI didn't apply any enforcement setting but the summary clearly
+ * describes one, infer it from keywords. Safety net only — the prompt
+ * remains primary.
+ */
+function inferEnforcementSetting(
+  incidentType: string | null,
+  summary: string | null,
+  headline: string | null,
+): string | null {
+  if (!incidentType) return incidentType;
+  const existing = incidentType.split(",").map((t) => t.trim());
+  const hasAnySetting = existing.some((t) => ENFORCEMENT_SETTINGS.includes(t));
+  if (hasAnySetting) return incidentType;
+
+  const text = `${headline || ""} ${summary || ""}`.toLowerCase();
+  if (!text.trim()) return incidentType;
+
+  const rules: Array<[string, RegExp]> = [
+    ["Court/USCIS/Immigration Office", /\b(check[- ]?in|routine check|scheduled check|field office|immigration court(?:house)?|uscis|ice office|immigration office|immigration interview|asylum interview|court hearing|scheduled (?:interview|appointment)|i-130|naturalization interview)\b/],
+    ["Airport", /\b(airport|customs|lax|jfk|ohare|o'hare|dulles|miami international|cbp (?:at|arriving))\b/],
+    ["Hospital/Medical", /\b(hospital|emergency room|urgent care|clinic|medical center|health (?:department|clinic|center)|prenatal appointment|doctor(?:'s)? office)\b/],
+    ["School", /\b(school|classroom|university|college campus|daycare|preschool)\b/],
+    ["Church/Place of Worship", /\b(church|mosque|synagogue|temple|place of worship|religious service)\b/],
+    ["Workplace", /\b(workplace|job site|jobsite|restaurant where|construction site|home depot|farm|factory|warehouse|while (?:at |working)|left for work|leaving (?:for |his |her )?work|car wash|landscap|while working)\b/],
+    ["Home/Residence", /\b(at (?:his|her|their) home|at the home|at (?:his|her|their) (?:apartment|residence|house)|home raid|at (?:his|her|their) door|front door|knocked on the door)\b/],
+    ["Vehicle/Traffic Stop", /\b(traffic stop|pulled over|while driving|in (?:his|her|their) (?:car|vehicle|truck)|traffic violation|police stop)\b/],
+    ["Criminal/Detainer", /\b(ice detainer|criminal detainer|transferred (?:from|to) (?:jail|prison|custody)|released from jail|after serving|after (?:his|her|their) sentence|while in (?:jail|prison|custody)|picked up from jail)\b/],
+  ];
+
+  const inferred: string[] = [];
+  for (const [setting, pattern] of rules) {
+    if (pattern.test(text)) {
+      inferred.push(setting);
+    }
+  }
+
+  if (inferred.length === 0) return incidentType;
+  return [...existing, ...inferred].join(", ");
 }
 
 export type TimelineEvent = {

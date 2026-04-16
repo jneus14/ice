@@ -1,7 +1,6 @@
 export const INCIDENT_TYPE_TAGS = [
   { value: "Climate/Environmental", label: "Climate/Environmental" },
   { value: "Court Order Violation", label: "Court Order Violation" },
-  { value: "Court Process Issue", label: "Court Process Issue" },
   { value: "Litigation", label: "Litigation" },
   { value: "Death", label: "Death" },
   { value: "Deported", label: "Deportation" },
@@ -59,12 +58,12 @@ export const INCIDENT_TAGS = [
 ] as const;
 
 export const SOURCE_TYPE_TAGS = [
-  { value: "social-media", label: "Social Media" },
+  { value: "legal-court", label: "Legal / Court" },
+  { value: "local-news", label: "Local News" },
   { value: "national-news", label: "National News" },
   { value: "international-news", label: "International News" },
   { value: "investigative-nonprofit", label: "Investigative / Nonprofit" },
-  { value: "legal-court", label: "Legal / Court" },
-  { value: "local-news", label: "Local News" },
+  { value: "social-media", label: "Social Media" },
 ] as const;
 
 export const SOURCE_TYPE_DOMAINS: Record<string, string[]> = {

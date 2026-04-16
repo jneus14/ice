@@ -115,7 +115,8 @@ const en: T = {
   tags: {
     incidentTypes: {
       "Climate/Environmental": "Climate/Environmental",
-      "Court Process Issue": "Court Process Issue",
+      "Court Order Violation": "Court Order Violation",
+      "Litigation": "Litigation",
       "Death": "Death",
       "Deported": "Deportation",
       "3rd Country Deportation": "Third Country Deportation",
@@ -222,7 +223,8 @@ const es: T = {
   tags: {
     incidentTypes: {
       "Climate/Environmental": "Clima/Medioambiente",
-      "Court Process Issue": "Problema de proceso judicial",
+      "Court Order Violation": "Violación de orden judicial",
+      "Litigation": "Litigio",
       "Death": "Muerte",
       "Deported": "Deportación",
       "3rd Country Deportation": "Deportación a tercer país",

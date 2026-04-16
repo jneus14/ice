@@ -8,7 +8,6 @@
  *   "Person with Disability" - people with physical/mental disabilities
  *
  * New INCIDENT_TYPE tags:
- *   "Court Process Issue"    - due process, warrant violations, habeas corpus, immigration court problems
  *   "Injury/Illness/Medical" - physical injury, illness, inadequate medical care in detention
  *   "Climate/Environmental"  - extreme heat/cold, pests, natural disasters, environmental conditions in detention
  *
@@ -29,7 +28,6 @@ const NEW_TAGS = [
   "Student",
   "LGBTQ+",
   "Person with Disability",
-  "Court Process Issue",
   "Injury/Illness/Medical",
   "Climate/Environmental",
 ] as const;
@@ -66,7 +64,6 @@ Person Impacted tags:
 - "Person with Disability": Person has a physical or mental disability (explicitly mentioned)
 
 Incident Type tags:
-- "Court Process Issue": Incident involves due process violations, warrant issues, habeas corpus, wrongful legal procedures, immigration court failures, or legal status errors
 - "Injury/Illness/Medical": Incident involves physical injury, illness, medical emergency, inadequate medical care, death from medical neglect, or health conditions in detention
 - "Climate/Environmental": Incident involves extreme heat, excessive cold, pests/insects/vermin, flooding, natural disasters, or similar environmental/climate conditions (typically in detention or during enforcement)
 
@@ -74,7 +71,7 @@ Be conservative. Only apply a tag when the evidence is clear in the headline or 
 
 Return a JSON object where keys are incident IDs (as strings) and values are arrays of applicable new tags from the list above. Only include incidents where at least one new tag applies. Return ONLY the JSON object, no other text.
 
-Example: {"123": ["DACA", "Court Process Issue"], "456": ["Injury/Illness/Medical"]}
+Example: {"123": ["DACA", "Injury/Illness/Medical"], "456": ["Climate/Environmental"]}
 
 INCIDENTS:
 ${incidentText}`;

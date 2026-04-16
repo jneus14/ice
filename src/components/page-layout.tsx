@@ -80,44 +80,6 @@ function FeedToggle() {
   );
 }
 
-function SocialOnlyToggle() {
-  const searchParams = useSearchParams();
-  const showing = searchParams.get("showSocial") === "1";
-
-  function toggleUrl() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("page");
-    if (showing) {
-      params.delete("showSocial");
-    } else {
-      params.set("showSocial", "1");
-    }
-    const qs = params.toString();
-    return qs ? `/?${qs}` : "/";
-  }
-
-  return (
-    <a
-      href={toggleUrl()}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors shadow-sm ${
-        showing
-          ? "bg-pink-600 text-white hover:bg-pink-700 border border-pink-600"
-          : "text-warm-600 bg-white border border-warm-300 hover:bg-warm-50 hover:border-warm-400 hover:text-warm-800"
-      }`}
-      title={
-        showing
-          ? "Hide incidents whose only sources are social media"
-          : "Show incidents whose only sources are social media"
-      }
-    >
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 4h10M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-      {showing ? "Hide social-only" : "Show social-only"}
-    </a>
-  );
-}
-
 export function PageLayout({
   mapIncidents,
   countries,
@@ -240,9 +202,6 @@ export function PageLayout({
               📋 Advocacy Posters
             </button>
           )}
-          <Suspense fallback={null}>
-            <SocialOnlyToggle />
-          </Suspense>
           {hasMap && (
             <button
               onClick={() => setShowMap(!showMap)}
