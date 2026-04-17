@@ -8,6 +8,7 @@ import { processIncidentPipeline } from "@/lib/pipeline";
 import { parseAltSources, serializeAltSources } from "@/lib/sources";
 import { synthesizeIncidents, serializeTimeline } from "@/lib/extractor";
 import { findNameGroups, extractPersonName, nameMatchScore } from "@/lib/name-utils";
+import { parseIncidentDate } from "@/lib/geocode";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -24,12 +25,14 @@ export async function createIncident(formData: FormData) {
   const url = (formData.get("url") as string)?.trim();
   if (!url) throw new Error("URL is required");
 
+  const date = (formData.get("date") as string)?.trim() || null;
   const incident = await prisma.incident.create({
     data: {
       url,
       altSources: extractAltSourcesFromForm(formData),
       headline: (formData.get("headline") as string)?.trim() || null,
-      date: (formData.get("date") as string)?.trim() || null,
+      date,
+      parsedDate: parseIncidentDate(date),
       location: (formData.get("location") as string)?.trim() || null,
       summary: (formData.get("summary") as string)?.trim() || null,
       incidentType: (formData.get("incidentType") as string)?.trim() || null,
@@ -53,13 +56,15 @@ export async function createIncident(formData: FormData) {
 export async function updateIncident(id: number, formData: FormData) {
   await requireAdmin();
 
+  const date = (formData.get("date") as string)?.trim() || null;
   await prisma.incident.update({
     where: { id },
     data: {
       url: (formData.get("url") as string)?.trim(),
       altSources: extractAltSourcesFromForm(formData),
       headline: (formData.get("headline") as string)?.trim() || null,
-      date: (formData.get("date") as string)?.trim() || null,
+      date,
+      parsedDate: parseIncidentDate(date),
       location: (formData.get("location") as string)?.trim() || null,
       summary: (formData.get("summary") as string)?.trim() || null,
       incidentType: (formData.get("incidentType") as string)?.trim() || null,

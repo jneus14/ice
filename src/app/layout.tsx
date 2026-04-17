@@ -5,7 +5,7 @@ import { ClientLayout } from "@/components/client-layout";
 export const metadata: Metadata = {
   title: "Human Impact Project",
   description:
-    "A living database documenting reported incidents of harm related to U.S. Immigration and Customs Enforcement operations.",
+    "A living database documenting reported immigration enforcement incidents and their human impact.",
 };
 
 export default function RootLayout({

@@ -25,7 +25,7 @@ export type IncidentFilters = {
   tags?: string[];
   tagMode?: "all" | "any";
   sourceTypes?: string[];
-  feed?: "incidents" | "policy";
+  feed?: "incidents" | "policy" | "analysis" | "all";
   location?: string;
   country?: string;
   dateFrom?: string;
@@ -165,19 +165,29 @@ export function buildFilterWhere(filters: IncidentFilters): any {
     AND.push({ longitude: { gte: bounds.west, lte: bounds.east } });
   }
 
-  // Feed filter: separate incidents from policy/resources
+  // Feed filter: route incidents/policy/analysis/all
   if (feed === "policy") {
     AND.push({
       OR: [
-        { incidentType: { contains: "Policy/Stats" } },
+        { incidentType: { contains: "Policy" } },
         { incidentType: { contains: "Resources" } },
       ],
     });
+  } else if (feed === "analysis") {
+    AND.push({ incidentType: { contains: "Analysis" } });
+  } else if (feed === "all") {
+    // No feed filter — everything passes
   } else {
-    // Default "incidents" feed: exclude policy/resources-only items
+    // Default "incidents" feed: exclude policy/analysis/resources items
     AND.push({
       OR: [
-        { incidentType: { not: { contains: "Policy/Stats" } } },
+        { incidentType: { not: { contains: "Policy" } } },
+        { incidentType: null },
+      ],
+    });
+    AND.push({
+      OR: [
+        { incidentType: { not: { contains: "Analysis" } } },
         { incidentType: null },
       ],
     });

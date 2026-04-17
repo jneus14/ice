@@ -38,6 +38,13 @@ type Incident = {
   lastCombinedAt?: Date | string | null;
 };
 
+const FEED_TABS = [
+  { value: "incidents", label: "Incidents" },
+  { value: "policy", label: "Policy" },
+  { value: "analysis", label: "Analysis" },
+  { value: "all", label: "All" },
+] as const;
+
 function FeedToggle() {
   const searchParams = useSearchParams();
   const currentFeed = searchParams.get("feed") || "incidents";
@@ -56,26 +63,21 @@ function FeedToggle() {
 
   return (
     <div className="flex rounded-lg border border-warm-300 overflow-hidden mb-4 shadow-sm">
-      <a
-        href={feedUrl("incidents")}
-        className={`flex-1 px-4 py-2.5 text-sm font-semibold text-center transition-colors ${
-          currentFeed === "incidents"
-            ? "bg-warm-800 text-white"
-            : "bg-white text-warm-500 hover:bg-warm-50 hover:text-warm-700"
-        }`}
-      >
-        Incidents
-      </a>
-      <a
-        href={feedUrl("policy")}
-        className={`flex-1 px-4 py-2.5 text-sm font-semibold text-center transition-colors border-l border-warm-300 ${
-          currentFeed === "policy"
-            ? "bg-warm-800 text-white"
-            : "bg-white text-warm-500 hover:bg-warm-50 hover:text-warm-700"
-        }`}
-      >
-        Policy & Resources
-      </a>
+      {FEED_TABS.map((tab, idx) => (
+        <a
+          key={tab.value}
+          href={feedUrl(tab.value)}
+          className={`flex-1 px-4 py-2.5 text-sm font-semibold text-center transition-colors ${
+            idx > 0 ? "border-l border-warm-300" : ""
+          } ${
+            currentFeed === tab.value
+              ? "bg-warm-800 text-white"
+              : "bg-white text-warm-500 hover:bg-warm-50 hover:text-warm-700"
+          }`}
+        >
+          {tab.label}
+        </a>
+      ))}
     </div>
   );
 }

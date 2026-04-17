@@ -1357,7 +1357,7 @@ export function IncidentCard({
               {editMode && (() => {
                 const posterTags = new Set(["Disappearance/Detention", "Deported", "3rd Country Deportation"]);
                 const hasPosterTag = rawTags.some((t) => posterTags.has(t));
-                const policyTag = rawTags.includes("Policy/Stats");
+                const policyTag = rawTags.includes("Policy") || rawTags.includes("Analysis");
                 const noPoster = rawTags.includes("no-poster");
                 if (!hasPosterTag || policyTag) return null;
                 // Check headline AND first sentence of summary for a specific person's name

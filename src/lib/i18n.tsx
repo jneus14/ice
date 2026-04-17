@@ -69,7 +69,7 @@ type T = {
 const en: T = {
   siteTitle: "Human Impact Project",
   siteDescription:
-    "A living database documenting reported incidents of harm related to U.S. Immigration and Customs Enforcement operations.",
+    "A living database documenting reported immigration enforcement incidents and their human impact.",
   projectOf: "A project of",
   footerText: "Data sourced from public reporting.",
   searchPlaceholder: "Search incidents by keyword, location, or name...",
@@ -126,7 +126,8 @@ const en: T = {
       "Injury/Illness/Medical": "Illness/Injury",
       "Officer Misconduct": "Officer Misconduct",
       "Officer Use Of Force": "Officer Use of Force",
-      "Policy/Stats": "Policy/Stats",
+      "Policy": "Policy",
+      "Analysis": "Analysis",
       "Raid": "Raid",
       "Resistance": "Resistance",
       "Resources": "Resources",
@@ -176,7 +177,7 @@ const en: T = {
 const es: T = {
   siteTitle: "Proyecto de Impacto Humano",
   siteDescription:
-    "Una base de datos que documenta incidentes reportados de daño relacionados con las operaciones del Servicio de Inmigración y Control de Aduanas de EE.UU.",
+    "Una base de datos que documenta incidentes reportados de control migratorio y su impacto humano.",
   projectOf: "Un proyecto de",
   footerText: "Datos obtenidos de reportes públicos.",
   searchPlaceholder: "Buscar incidentes por palabra clave, lugar o nombre...",
@@ -234,7 +235,8 @@ const es: T = {
       "Injury/Illness/Medical": "Enfermedad/Lesión",
       "Officer Misconduct": "Mala conducta policial",
       "Officer Use Of Force": "Uso de fuerza por agentes",
-      "Policy/Stats": "Política/Estadísticas",
+      "Policy": "Política",
+      "Analysis": "Análisis",
       "Raid": "Redada",
       "Resistance": "Resistencia",
       "Resources": "Recursos",

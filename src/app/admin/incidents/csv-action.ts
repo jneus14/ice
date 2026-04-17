@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { parse } from "csv-parse/sync";
 import { serializeAltSources } from "@/lib/sources";
+import { parseIncidentDate } from "@/lib/geocode";
 
 export async function uploadCsv(formData: FormData): Promise<string> {
   const session = await getSession();
@@ -41,6 +42,7 @@ export async function uploadCsv(formData: FormData): Promise<string> {
       .filter(Boolean);
     const altSources = serializeAltSources(altSourceUrls);
 
+    const date = row.date || row.Date || null;
     try {
       await prisma.incident.upsert({
         where: { url: url.trim() },
@@ -48,7 +50,8 @@ export async function uploadCsv(formData: FormData): Promise<string> {
         create: {
           url: url.trim(),
           altSources,
-          date: row.date || row.Date || null,
+          date,
+          parsedDate: parseIncidentDate(date),
           location: row.location || row.Location || null,
           headline: row.headline || row.Headline || null,
           summary: row.summary || row.Summary || null,

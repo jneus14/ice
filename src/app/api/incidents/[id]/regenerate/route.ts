@@ -88,10 +88,24 @@ export async function POST(
       timeline: [] as Array<{ date: string; event: string; source?: string }>,
     }));
 
-    // Pick best date: prefer extracted dates, fall back to existing
-    const extractedDates = sources.map((s) => s.date).filter(Boolean) as string[];
-    const bestDate = extractedDates[0] || incident.date;
-    const parsedDate = parseIncidentDate(bestDate);
+    // Pick best date: prefer the latest timeline event (so stories sort by
+    // their most recent development, not their earliest), then fall back to
+    // extracted source dates, then the existing date.
+    const timelineDated = result.timeline
+      .map((e) => ({ raw: e.date, parsed: parseIncidentDate(e.date) }))
+      .filter((e): e is { raw: string; parsed: Date } => e.parsed !== null)
+      .sort((a, b) => b.parsed.getTime() - a.parsed.getTime());
+
+    let bestDate: string | null;
+    let parsedDate: Date | null;
+    if (timelineDated.length > 0) {
+      bestDate = timelineDated[0].raw;
+      parsedDate = timelineDated[0].parsed;
+    } else {
+      const extractedDates = sources.map((s) => s.date).filter(Boolean) as string[];
+      bestDate = extractedDates[0] || incident.date;
+      parsedDate = parseIncidentDate(bestDate);
+    }
 
     await prisma.incident.update({
       where: { id },

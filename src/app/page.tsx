@@ -23,7 +23,12 @@ export default async function Home({
       : (params.sourceType as string[] | undefined);
 
   const page = Number(params.page) || 1;
-  const feed = (params.feed === "policy" ? "policy" : "incidents") as "incidents" | "policy";
+  const feedParam = params.feed;
+  const feed = (
+    feedParam === "policy" || feedParam === "analysis" || feedParam === "all"
+      ? feedParam
+      : "incidents"
+  ) as "incidents" | "policy" | "analysis" | "all";
   // Social-only incidents are always included in the feed and marked with a banner.
   const hideSocialOnly = false;
 
