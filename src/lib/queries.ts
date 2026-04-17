@@ -7,10 +7,17 @@ export function parseFiltersFromParams(params: URLSearchParams): IncidentFilters
   const bounds = n && s && e && w
     ? { north: parseFloat(n), south: parseFloat(s), east: parseFloat(e), west: parseFloat(w) }
     : undefined;
+  const feedRaw = params.get("feed");
+  const feed = feedRaw === "policy" || feedRaw === "litigation" || feedRaw === "all" || feedRaw === "incidents"
+    ? feedRaw
+    : undefined;
+  const sourceTypes = params.getAll("sourceType");
   return {
     search: params.get("q") || undefined,
     tags: params.getAll("tag").length > 0 ? params.getAll("tag") : undefined,
     tagMode: (params.get("tagMode") as "all" | "any") || undefined,
+    sourceTypes: sourceTypes.length > 0 ? sourceTypes : undefined,
+    feed,
     location: params.get("location") || undefined,
     country: params.get("country") || undefined,
     dateFrom: params.get("from") || undefined,
@@ -25,7 +32,7 @@ export type IncidentFilters = {
   tags?: string[];
   tagMode?: "all" | "any";
   sourceTypes?: string[];
-  feed?: "incidents" | "policy" | "analysis" | "all";
+  feed?: "incidents" | "policy" | "litigation" | "all";
   location?: string;
   country?: string;
   dateFrom?: string;
@@ -165,16 +172,23 @@ export function buildFilterWhere(filters: IncidentFilters): any {
     AND.push({ longitude: { gte: bounds.west, lte: bounds.east } });
   }
 
-  // Feed filter: route incidents/policy/analysis/all
+  // Feed filter: route incidents/policy/litigation/all
   if (feed === "policy") {
     AND.push({
       OR: [
         { incidentType: { contains: "Policy" } },
+        { incidentType: { contains: "Analysis" } },
         { incidentType: { contains: "Resources" } },
       ],
     });
-  } else if (feed === "analysis") {
-    AND.push({ incidentType: { contains: "Analysis" } });
+  } else if (feed === "litigation") {
+    const legalDomains = SOURCE_TYPE_DOMAINS["legal-court"] ?? [];
+    AND.push({
+      OR: legalDomains.flatMap((d) => [
+        { url: { contains: d } },
+        { altSources: { contains: d } },
+      ]),
+    });
   } else if (feed === "all") {
     // No feed filter — everything passes
   } else {

@@ -7,6 +7,7 @@ import { SearchFilters } from "@/components/search-filters";
 import { IncidentMap } from "@/components/incident-map";
 import { IncidentList } from "@/components/incident-list";
 import { useLanguage } from "@/lib/i18n";
+import { FILTER_KEYS } from "@/lib/constants";
 
 type MapIncident = {
   id: number;
@@ -40,19 +41,24 @@ type Incident = {
 
 const FEED_TABS = [
   { value: "incidents", label: "Incidents" },
-  { value: "policy", label: "Policy" },
-  { value: "analysis", label: "Analysis" },
-  { value: "all", label: "All" },
+  { value: "policy", label: "Policy & Analysis" },
+  { value: "litigation", label: "Litigation" },
+  { value: "all", label: "All", prominent: true },
 ] as const;
 
 function FeedToggle() {
   const searchParams = useSearchParams();
-  const currentFeed = searchParams.get("feed") || "incidents";
+  const explicitFeed = searchParams.get("feed");
+  const hasFilters = FILTER_KEYS.some((k) => searchParams.has(k));
+  // Same smart default as app/page.tsx: filtered + no explicit tab = "all".
+  const currentFeed = explicitFeed ?? (hasFilters ? "all" : "incidents");
 
   function feedUrl(feed: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("page");
-    if (feed === "incidents") {
+    // "incidents" without filters is the clean default — drop the param.
+    // Otherwise keep it explicit so the user's choice survives the smart default.
+    if (feed === "incidents" && !hasFilters) {
       params.delete("feed");
     } else {
       params.set("feed", feed);
@@ -63,21 +69,31 @@ function FeedToggle() {
 
   return (
     <div className="flex rounded-lg border border-warm-300 overflow-hidden mb-4 shadow-sm">
-      {FEED_TABS.map((tab, idx) => (
-        <a
-          key={tab.value}
-          href={feedUrl(tab.value)}
-          className={`flex-1 px-4 py-2.5 text-sm font-semibold text-center transition-colors ${
-            idx > 0 ? "border-l border-warm-300" : ""
-          } ${
-            currentFeed === tab.value
-              ? "bg-warm-800 text-white"
-              : "bg-white text-warm-500 hover:bg-warm-50 hover:text-warm-700"
-          }`}
-        >
-          {tab.label}
-        </a>
-      ))}
+      {FEED_TABS.map((tab, idx) => {
+        const isProminent = "prominent" in tab && tab.prominent;
+        const active = currentFeed === tab.value;
+        const base = "flex-1 px-4 py-2.5 text-sm font-semibold text-center transition-colors";
+        const borderLeft = idx > 0 ? "border-l border-warm-300" : "";
+        let state: string;
+        if (isProminent) {
+          state = active
+            ? "bg-amber-600 text-white"
+            : "bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800";
+        } else {
+          state = active
+            ? "bg-warm-800 text-white"
+            : "bg-white text-warm-500 hover:bg-warm-50 hover:text-warm-700";
+        }
+        return (
+          <a
+            key={tab.value}
+            href={feedUrl(tab.value)}
+            className={`${base} ${borderLeft} ${state}`}
+          >
+            {tab.label}
+          </a>
+        );
+      })}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   PERSON_IMPACTED_TAGS,
   ENFORCEMENT_SETTING_TAGS,
   SOURCE_TYPE_TAGS,
+  FILTER_KEYS,
 } from "@/lib/constants";
 import { useLanguage } from "@/lib/i18n";
 
@@ -267,7 +268,18 @@ export function SearchFilters({ countries }: { countries: string[] }) {
           {t.clearFilters}
         </button>
         <a
-          href={`/api/export?format=csv&${searchParams.toString()}`}
+          href={(() => {
+            // Match the view the user is seeing: if they haven't explicitly
+            // picked a tab but have filters applied, page.tsx promotes feed to
+            // "all". Mirror that here so the CSV matches what they see.
+            const p = new URLSearchParams(searchParams.toString());
+            p.set("format", "csv");
+            if (!p.get("feed")) {
+              const hasFilters = FILTER_KEYS.some((k) => p.has(k));
+              p.set("feed", hasFilters ? "all" : "incidents");
+            }
+            return `/api/export?${p.toString()}`;
+          })()}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-warm-600 border border-warm-300 rounded-lg hover:bg-warm-50 transition-colors shadow-sm"

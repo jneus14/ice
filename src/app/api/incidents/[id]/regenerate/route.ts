@@ -90,10 +90,13 @@ export async function POST(
 
     // Pick best date: prefer the latest timeline event (so stories sort by
     // their most recent development, not their earliest), then fall back to
-    // extracted source dates, then the existing date.
+    // extracted source dates, then the existing date. Skip future-dated
+    // events — they're usually scheduled hearings, not the story's latest
+    // real-world development.
+    const now = Date.now();
     const timelineDated = result.timeline
       .map((e) => ({ raw: e.date, parsed: parseIncidentDate(e.date) }))
-      .filter((e): e is { raw: string; parsed: Date } => e.parsed !== null)
+      .filter((e): e is { raw: string; parsed: Date } => e.parsed !== null && e.parsed.getTime() <= now)
       .sort((a, b) => b.parsed.getTime() - a.parsed.getTime());
 
     let bestDate: string | null;

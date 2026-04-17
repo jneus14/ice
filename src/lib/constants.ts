@@ -98,6 +98,14 @@ export const STATUS = {
   FAILED: "FAILED",
 } as const;
 
+// Query-string keys that represent an active filter. When any of these are set
+// and no explicit `feed` is chosen, the feed auto-switches from "incidents" to
+// "all" so users see filtered results across every bucket.
+export const FILTER_KEYS = [
+  "q", "tag", "sourceType", "location", "country",
+  "from", "to", "range", "n", "s", "e", "w",
+] as const;
+
 export const TIME_RANGES = [
   { value: "month", label: "Past Month" },
   { value: "3months", label: "Past 3 Months" },

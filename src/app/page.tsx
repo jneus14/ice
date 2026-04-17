@@ -5,6 +5,7 @@ import {
   getMapIncidents,
   getPendingIncidents,
 } from "@/lib/queries";
+import { FILTER_KEYS } from "@/lib/constants";
 import { PageLayout } from "@/components/page-layout";
 
 export default async function Home({
@@ -24,11 +25,19 @@ export default async function Home({
 
   const page = Number(params.page) || 1;
   const feedParam = params.feed;
-  const feed = (
-    feedParam === "policy" || feedParam === "analysis" || feedParam === "all"
+  const explicitFeed =
+    feedParam === "policy" || feedParam === "litigation" || feedParam === "all" || feedParam === "incidents"
       ? feedParam
-      : "incidents"
-  ) as "incidents" | "policy" | "analysis" | "all";
+      : null;
+  // If the user is filtering (search/tag/location/date/etc.) and hasn't picked
+  // a feed tab explicitly, show "all" so their results aren't hidden by the
+  // default "incidents" exclusion. A fresh page load with no filters → incidents.
+  const hasFilters = FILTER_KEYS.some((k) => {
+    const v = params[k];
+    return Array.isArray(v) ? v.length > 0 : !!v;
+  });
+  const feed = (explicitFeed ?? (hasFilters ? "all" : "incidents")) as
+    | "incidents" | "policy" | "litigation" | "all";
   // Social-only incidents are always included in the feed and marked with a banner.
   const hideSocialOnly = false;
 
