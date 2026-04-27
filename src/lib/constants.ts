@@ -24,6 +24,7 @@ export const PERSON_IMPACTED_TAGS = [
   { value: "LGBTQ+", label: "LGBTQ+" },
   { value: "LPR", label: "LPR/Greencard" },
   { value: "Minor/Family", label: "Minor" },
+  { value: "Black", label: "Black" },
   { value: "Native American", label: "Native American (U.S.)" },
   { value: "Indigenous (Non-U.S.)", label: "Indigenous (Non-U.S.)" },
   { value: "Person with Disability", label: "Person with Disability" },
