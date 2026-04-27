@@ -40,7 +40,7 @@ const EXTRACTION_PROMPT = `You are a data extraction assistant. Given the text c
   "date": "The date of the incident in M/D/YYYY format if available, otherwise null",
   "location": "City, State abbreviation (e.g. 'St. Paul, MN' or 'Chicago, IL'). MUST be the specific city/town name, NEVER use the full state name (e.g. 'Minnesota, MN' is WRONG). If no specific city is mentioned, use the county or region. If only a state is known, use just the state abbreviation (e.g. 'TX'). Null if unavailable.",
   "summary": "A 2-4 sentence factual summary of what happened",
-  "incidentType": "Comma-separated tags from ONLY these options. INCIDENT TYPE: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Family Separation, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Order Violation, Litigation, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention, Military. ENFORCEMENT SETTING (where the enforcement action took place, if mentioned): Court/USCIS/Immigration Office, Airport, Vehicle/Traffic Stop, Workplace, School, Church/Place of Worship, Hospital/Medical, Home/Residence, Criminal/Detainer, Public Space/Street",
+  "incidentType": "Comma-separated tags from ONLY these options. INCIDENT TYPE: Detained, Deported, Death, Detention Conditions, Officer Use Of Force, Officer Misconduct, Policy/Stats, Minor/Family, U.S. Citizen, Protest / Intervention, Raid, Resistance, Resources, Refugee/Asylum, DACA, Visa / Legal Status, LPR, TPS, Court Order Violation, Litigation, 3rd Country Deportation, Native American, Indigenous (Non-U.S.), Vigilante, Disappearance/Detention, Military. ENFORCEMENT SETTING (where the enforcement action took place, if mentioned): Court/USCIS/Immigration Office, Airport, Vehicle/Traffic Stop, Workplace, School, Church/Place of Worship, Hospital/Medical, Home/Residence, Criminal/Detainer, Public Space/Street",
   "country": "Country of origin of the affected person if mentioned, otherwise null"
 }
 
@@ -53,7 +53,6 @@ Rules:
   - "Policy": for stories about immigration policy developments, legislative or executive action, lawsuits brought by or against the government, and structural changes to enforcement. Examples: "Minnesota sues federal government over ICE cooperation", "Trump administration expands detention capacity", "DHS issues new enforcement directive", "Court rules on sanctuary city ordinance". Use when the story's focus is a policy, law, or governmental action — not a specific individual's incident.
   - "Analysis": for stories driven by statistics, aggregate data, or trend reporting. Examples: "ICE arrests exceed 1,000 daily", "Deportation flights increase 40%", "Detention numbers in Texas reach new high", analytical pieces examining enforcement patterns across regions or time periods. Use when the story's focus is data or trends rather than a specific person's incident. A story can be both Policy and Analysis when a policy development is framed around data (e.g. a lawsuit citing detention statistics).
   - "Detained" / "Disappearance/Detention": ONLY when a specific, named or identified person is actually detained, disappeared, or held in custody in the story. Do NOT use for stories about aggregate arrest/detention statistics, general policy, planned facilities, or protests about detention. If the story is about overall enforcement numbers, use "Analysis"; if about policy trends, use "Policy".
-  - "Family Separation": for stories where immigration enforcement separates family members — parents taken from children, children left behind after a parent is detained/deported, families split across borders, children placed in foster care due to parent's detention. Use alongside other tags as appropriate.
   - "Deported": ONLY when a specific, named or identified person is actually deported or removed from the country in the story. Do NOT use for stories about aggregate deportation statistics, deportation policy changes, or general deportation trends. If the story is about overall deportation numbers, use "Analysis"; if about policy, use "Policy".
   - "Resistance": for vigils, protests, rallies, community organizing, sanctuary movements, activist stories, community opposition to ICE facilities/operations, and cases where activists or advocates are targeted by ICE.
   - "Resources": for legal guides, know-your-rights information, toolkits for immigrants, legal resource directories, how-to guides for dealing with ICE encounters, immigration legal aid information, and similar practical resources. These are NOT news stories about specific incidents.
@@ -298,17 +297,20 @@ export async function synthesizeIncidentsWithMismatchDetection(
     )
     .join("\n\n");
 
-  const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 2048,
-    system: SYNTHESIS_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Verify these sources are about the same incident, then synthesize if they are:\n\n${content}`,
-      },
-    ],
-  });
+  const message = await anthropic.messages.create(
+    {
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2048,
+      system: SYNTHESIS_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: `Verify these sources are about the same incident, then synthesize if they are:\n\n${content}`,
+        },
+      ],
+    },
+    { timeout: 20000 },
+  );
 
   const responseContent = message.content[0];
   if (responseContent.type !== "text") {

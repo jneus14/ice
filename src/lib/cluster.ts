@@ -33,9 +33,12 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 
 function cityFromLocation(location: string | null): string | null {
   if (!location) return null;
-  // "San Francisco, CA" → "san francisco"
-  const city = location.split(",")[0].trim().toLowerCase();
-  return city.length > 0 ? city : null;
+  // "San Francisco, CA" → "san francisco, ca". Include state so Portland, OR
+  // and Portland, ME don't collide. If no state is present, fall back to city
+  // alone (still useful, just less precise).
+  const parts = location.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean);
+  if (parts.length === 0) return null;
+  return parts.slice(0, 2).join(", ");
 }
 
 function daysBetween(d1: string | null, d2: string | null): number | null {
