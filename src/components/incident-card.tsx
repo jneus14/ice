@@ -962,6 +962,13 @@ export function IncidentCard({
                 >
                   {getSourceName(primarySource)}
                 </a>
+                {cardEditing && allSources.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeSource(primarySource); }}
+                    className="text-red-400 hover:text-red-600 text-[10px] -ml-1"
+                    title="Remove primary source (next source will be promoted)"
+                  >✕</button>
+                )}
                 {allSources.length > 1 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setSourcesExpanded(!sourcesExpanded); }}

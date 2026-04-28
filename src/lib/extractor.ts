@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PageMetadata } from "./scraper";
+import { AFRICAN_COUNTRIES } from "./constants";
 
 const SYNTHESIS_PROMPT = `You are a data synthesis assistant. Given multiple news articles or sources about immigration enforcement incidents, verify they are about the SAME event or topic, then synthesize. Return ONLY valid JSON with no markdown formatting.
 
@@ -147,10 +148,14 @@ export async function extractFromText(
 
   const parsed = JSON.parse(jsonStr);
 
-  const incidentType = inferEnforcementSetting(
-    parsed.incidentType || null,
-    parsed.summary || null,
-    parsed.headline || null,
+  const country = parsed.country || null;
+  const incidentType = inferBlackTag(
+    inferEnforcementSetting(
+      parsed.incidentType || null,
+      parsed.summary || null,
+      parsed.headline || null,
+    ),
+    country,
   );
 
   return {
@@ -159,7 +164,7 @@ export async function extractFromText(
     location: parsed.location || null,
     summary: parsed.summary || null,
     incidentType,
-    country: parsed.country || null,
+    country,
   };
 }
 
@@ -215,6 +220,25 @@ function inferEnforcementSetting(
 
   if (inferred.length === 0) return incidentType;
   return [...existing, ...inferred].join(", ");
+}
+
+/**
+ * If the incident's country of origin is in Africa, ensure the "Black"
+ * person-impacted tag is applied. Safety net for the LLM missing the
+ * country-based rule in the extraction prompt.
+ */
+function inferBlackTag(
+  incidentType: string | null,
+  country: string | null,
+): string | null {
+  if (!country) return incidentType;
+  if (!AFRICAN_COUNTRIES.has(country.trim().toLowerCase())) return incidentType;
+  const existing = (incidentType ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (existing.includes("Black")) return incidentType;
+  return [...existing, "Black"].join(", ") || "Black";
 }
 
 export type TimelineEvent = {

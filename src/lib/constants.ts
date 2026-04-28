@@ -112,3 +112,22 @@ export const TIME_RANGES = [
   { value: "year", label: "Past Year" },
   { value: "all", label: "All Time" },
 ] as const;
+
+// Used to auto-apply the "Black" person-impacted tag for incidents whose
+// country of origin is in Africa. Lower-cased for case-insensitive lookup.
+export const AFRICAN_COUNTRIES: ReadonlySet<string> = new Set(
+  [
+    "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
+    "Cameroon", "Cape Verde", "Cabo Verde", "Central African Republic",
+    "Chad", "Comoros", "Congo", "Democratic Republic of the Congo",
+    "Republic of the Congo", "DRC", "Côte d'Ivoire", "Cote d'Ivoire",
+    "Ivory Coast", "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea",
+    "Eswatini", "Swaziland", "Ethiopia", "Gabon", "Gambia", "Ghana",
+    "Guinea", "Guinea-Bissau", "Kenya", "Lesotho", "Liberia", "Libya",
+    "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco",
+    "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda",
+    "São Tomé and Príncipe", "Sao Tome and Principe", "Senegal",
+    "Seychelles", "Sierra Leone", "Somalia", "South Africa", "South Sudan",
+    "Sudan", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe",
+  ].map((c) => c.toLowerCase())
+);

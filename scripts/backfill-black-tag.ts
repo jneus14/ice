@@ -11,23 +11,7 @@
  *   pnpm tsx scripts/backfill-black-tag.ts         (apply)
  */
 import { prisma } from "../src/lib/db";
-
-const AFRICAN_COUNTRIES = new Set(
-  [
-    "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
-    "Cameroon", "Cape Verde", "Cabo Verde", "Central African Republic",
-    "Chad", "Comoros", "Congo", "Democratic Republic of the Congo",
-    "Republic of the Congo", "DRC", "Côte d'Ivoire", "Cote d'Ivoire",
-    "Ivory Coast", "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea",
-    "Eswatini", "Swaziland", "Ethiopia", "Gabon", "Gambia", "Ghana",
-    "Guinea", "Guinea-Bissau", "Kenya", "Lesotho", "Liberia", "Libya",
-    "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco",
-    "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda",
-    "São Tomé and Príncipe", "Sao Tome and Principe", "Senegal",
-    "Seychelles", "Sierra Leone", "Somalia", "South Africa", "South Sudan",
-    "Sudan", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe",
-  ].map((c) => c.toLowerCase())
-);
+import { AFRICAN_COUNTRIES } from "../src/lib/constants";
 
 const AFRO_RE = /\bAfro-/i;
 const AFRICAN_AMERICAN_RE = /\bAfrican[\s-]Americans?\b/i;
