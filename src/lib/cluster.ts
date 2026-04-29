@@ -41,6 +41,28 @@ function cityFromLocation(location: string | null): string | null {
   return parts.slice(0, 2).join(", ");
 }
 
+/**
+ * Pull the leading person name from a summary. Most incident summaries
+ * start "FirstName LastName, a citizen of …" — if two stories name two
+ * different people, they are different incidents regardless of how
+ * similar the headlines look. Returns lowercased name tokens of length
+ * 4+ (drops "de", "la", initials, etc.). Null when no plausible name.
+ */
+function leadNameTokens(summary: string | null): string[] | null {
+  if (!summary) return null;
+  const firstSegment = summary.trim().split(",")[0];
+  // 2-4 consecutive Capitalized words at the very start.
+  const match = firstSegment.match(
+    /^([A-Z][a-zA-Z'\-]+(?:\s+[A-Z][a-zA-Z'\-]+){1,3})/
+  );
+  if (!match) return null;
+  const tokens = match[1]
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length >= 4);
+  return tokens.length > 0 ? tokens : null;
+}
+
 function daysBetween(d1: string | null, d2: string | null): number | null {
   if (!d1 || !d2) return null;
   const parse = (s: string) => {
@@ -78,11 +100,22 @@ export function clusterIncidents(incidents: ClusterableIncident[]): Cluster[] {
   const edges: Array<[number, number, number]> = []; // [idxA, idxB, score]
 
   const wordSets = incidents.map((i) => headlineWords(i.headline));
+  const nameTokens = incidents.map((i) => leadNameTokens(i.summary));
 
   for (let i = 0; i < incidents.length; i++) {
     for (let j = i + 1; j < incidents.length; j++) {
       const a = incidents[i];
       const b = incidents[j];
+
+      // If both summaries identify a lead person, require at least one
+      // shared name token (e.g. shared surname for family-incident cases).
+      // Different named people = different incidents.
+      const tokensA = nameTokens[i];
+      const tokensB = nameTokens[j];
+      if (tokensA && tokensB) {
+        const shared = tokensA.some((t) => tokensB.includes(t));
+        if (!shared) continue;
+      }
 
       // Headline keyword overlap
       const sim = jaccard(wordSets[i], wordSets[j]);
